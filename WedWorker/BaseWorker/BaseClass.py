@@ -12,9 +12,10 @@ class BaseClass(metaclass=ABCMeta):
     - dbs: database connection string
     """
     
-    def __init__(self,trname,dbs):
+    def __init__(self,trname,dbs,wakeup_interval=60):
         self.trname = trname
         self.dbs = dbs
+        self.wkupint = wakeup_interval
         self.wed_cond = self.get_wed_cond(trname)
     #-------------------------------------------------------------------------------------------------------------------
     @staticmethod
@@ -112,7 +113,7 @@ class BaseClass(metaclass=ABCMeta):
         self.job_lookup()
         
         while 1:
-            if select.select([conn],[],[],20) == ([],[],[]):
+            if select.select([conn],[],[],self.wkupint) == ([],[],[]):
                 print("[\033[33m%s\033[0m] Timeout: looking for pending jobs..." %(self.trname))
                 self.job_lookup()
             else:
