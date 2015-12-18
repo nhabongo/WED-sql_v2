@@ -32,7 +32,7 @@ class BaseClass(metaclass=ABCMeta):
             job_conn = psycopg2.connect(self.dbs)
         except Exception as e:
             print(e)
-            sys.exit(1)
+            return 1
 
         #Cursor as a dict()
         #curs = job_conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -46,61 +46,53 @@ class BaseClass(metaclass=ABCMeta):
             if not curs.rowcount:
                 print('[\033[33m%s\033[0m] Nothing to do, going back to sleep.' %(self.trname))
             for data in curs.fetchall():
-                if self.job_lock(data[0],curs):
-                    wed_state = self.wed_trans()
-                    if self.job_commit(data[0],curs,wed_state):
-                        time.sleep(5)
-                        job_conn.commit()
-                    else:
-                        job_conn.rollback()
-                else:
-                    job_conn.rollback()
+                self.perform_transaction(data[0])
+        job_conn.close()       
 
-    #-------------------------------------------------------------------------------------------------------------------                
-    def job_notify(self,wid):
+    #-------------------------------------------------------------------------------------------------------------------
+    def perform_transaction(self,wid):
         try:
             job_conn = psycopg2.connect(self.dbs)
         except Exception as e:
             print(e)
-            sys.exit(1)
+            return 0
         
         curs = job_conn.cursor()
         
-        if self.job_lock(wid,curs):
-            wed_state = self.wed_trans()
-            if self.job_commit(wid,curs,wed_state):
-                time.sleep(5)
-                job_conn.commit()
-            else:
-                job_conn.rollback()
-        else:
-            job_conn.rollback()
-
-    #-------------------------------------------------------------------------------------------------------------------        
-    def job_commit(self,wid,curs,wed_state):
+        # Try to open a transaction and lock the WED-flow instance wid, with the WED-state matching wed_cond
         try:
-            curs.execute('UPDATE wedflow SET '+wed_state+' WHERE id=%s',[wid])
+            curs.execute('SELECT * FROM wedflow where id=%s AND '+self.wed_cond+' FOR UPDATE NOWAIT ',[wid])
+        except Exception as e:
+            if not job_conn:
+                print ('[\033[33m%s\033[0m] Connection closed by database (possible due to WED-transaction timeout): %s' %(self.trname,wid, e))
+            else:
+                print ('[\033[33m%s\033[0m] Instance %d already locked: %s' %(self.trname,wid, e))
+                job_conn.close()
+            return 0
+        
+        if not curs.rowcount:
+            print('[\033[33m%s\033[0m] Instance %d: WED-condition missmatch (maybe this WED-state was already processed by another worker)' %(self.trname,wid))
+            job_conn.close()
+            return 0
+        else:
+            print('[\033[33m%s\033[0m] Instance %d LOCKED !' %(self.trname, wid))
+        
+        #Perform WED-transaction defined by wed_trans()
+        print('[\033[33m%s\033[0m] Instance %d : performing WED-transaction ...' %(self.trname, wid))
+        
+        wed_state = self.wed_trans()
+        
+        try:
+            curs.execute('UPDATE wedflow SET '+wed_state+' WHERE id=%s; COMMIT',[wid])
         except Exception as e:
             print ('[\033[33m%s\033[0m] Instance %d : %s' %(self.trname,wid, e))
             return 0
         else:
             print ('[\033[33m%s\033[0m] Instance %d updated !' %(self.trname,wid))
-            return 1 
-    
-    #-------------------------------------------------------------------------------------------------------------------
-    def job_lock(self,wid,curs):
-        try:
-            curs.execute('SELECT * FROM wedflow where id=%s AND '+self.wed_cond+' FOR UPDATE NOWAIT ',[wid])
-        except Exception as e:
-            print ('[\033[33m%s\033[0m] Instance %d already locked: %s' %(self.trname,wid, e))
-            return 0
-        else:
-            if curs.rowcount:
-                print ('[\033[33m%s\033[0m] Instance %d LOCKED !' %(self.trname, wid))
-                return 1
-            else:
-                print('[\033[33m%s\033[0m] Instance %d: WED-condition missmatch (maybe this WED-state was already processed by another worker)' %(self.trname,wid))
-                return 0     
+            job_conn.close()
+            return 1  
+        
+        return 0     
     
     #-------------------------------------------------------------------------------------------------------------------
     def run(self):
@@ -108,6 +100,7 @@ class BaseClass(metaclass=ABCMeta):
             conn = psycopg2.connect(self.dbs)
         except Exception as e:
             print(e)
+            return
             
         conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
 
@@ -119,7 +112,7 @@ class BaseClass(metaclass=ABCMeta):
         self.job_lookup()
         
         while 1:
-            if select.select([conn],[],[],50) == ([],[],[]):
+            if select.select([conn],[],[],20) == ([],[],[]):
                 print("[\033[33m%s\033[0m] Timeout: looking for pending jobs..." %(self.trname))
                 self.job_lookup()
             else:
@@ -129,5 +122,5 @@ class BaseClass(metaclass=ABCMeta):
                     notify = conn.notifies.pop(0)
                     print("[\033[33m%s\033[0m] Got NOTIFY: %d, %s, %s" %(self.trname,notify.pid, notify.channel, notify.payload))
                     job = json.loads(notify.payload)
-                    self.job_notify(job['wid'])
+                    self.perform_transaction(job['wid'])
 

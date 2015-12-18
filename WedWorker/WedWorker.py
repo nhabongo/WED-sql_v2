@@ -1,5 +1,5 @@
 from BaseWorker import BaseClass
-import sys
+import sys,time
 
 class MyWorker(BaseClass):
     
@@ -11,6 +11,7 @@ class MyWorker(BaseClass):
         super().__init__(MyWorker.trname,MyWorker.dbs)
         
     def wed_trans(self):
+        time.sleep(15)
         return "a1='d',a2='d'"
         
 w = MyWorker()
