@@ -1,0 +1,5 @@
+# wed_worker extension
+comment = 'WED-flow wed_worker job_pool worker'
+default_version = '1.0'
+module_pathname = '$libdir/wed_worker'
+relocatable = true

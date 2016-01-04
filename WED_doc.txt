@@ -1,0 +1,14 @@
+--manage timeout of open transactions
+pg_stat_activity
+pg_locks
+
+--advisory locks
+table oid = select 'table name'::regclass::oid)::integer
+select pg_try_advisory_lock(<table oid>, <row_number>)
+select pg_advisory_unlock(<table oid>, <row_number>)
+
+--kill transaction
+
+--reset id for job pool
+number of rows vs currval('seq')
+setval('seq'::regclass, value)
