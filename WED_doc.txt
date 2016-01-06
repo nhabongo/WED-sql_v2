@@ -12,3 +12,7 @@ select pg_advisory_unlock(<table oid>, <row_number>)
 --reset id for job pool
 number of rows vs currval('seq')
 setval('seq'::regclass, value)
+
+--condition match
+trigger on wed_trig (validate trname)
+remove any ';' before match

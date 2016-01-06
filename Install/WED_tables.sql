@@ -3,6 +3,7 @@
 DROP TABLE IF EXISTS WED_attr;
 DROP TABLE IF EXISTS WED_trace;
 DROP TABLE IF EXISTS JOB_POOL;
+DROP SEQUENCE IF EXISTS job_id_gen;
 DROP TABLE IF EXISTS WED_trig;
 DROP TABLE IF EXISTS ST_STATUS;
 DROP TABLE IF EXISTS WED_flow CASCADE;
@@ -12,8 +13,7 @@ DROP TABLE IF EXISTS WED_flow CASCADE;
 -- An '*' means that WED-attributes columns will be added dynamicaly after an INSERT on WED-attr table
 --*WED-flow instances
 CREATE TABLE WED_flow (
-    wid     SERIAL NOT NULL,
-    PRIMARY KEY(wid)
+    wid     SERIAL PRIMARY KEY
 );
 
 CREATE TABLE WED_attr (
@@ -32,7 +32,7 @@ CREATE TABLE WED_trig (
     cname  TEXT NOT NULL DEFAULT '',
     cpred  TEXT NOT NULL DEFAULT '',
     cfinal BOOL NOT NULL DEFAULT FALSE,
-    timeout    INTERVAL DEFAULT '00:01:00',
+    timeout    INTERVAL DEFAULT '00:01:00'
 );
 CREATE UNIQUE INDEX wed_trig_lower_trname_idx ON WED_trig (lower(trname));
 CREATE UNIQUE INDEX wed_trig_cfinal_idx ON WED_trig (cfinal) WHERE cfinal is TRUE;
@@ -41,12 +41,11 @@ CREATE UNIQUE INDEX wed_trig_cfinal_idx ON WED_trig (cfinal) WHERE cfinal is TRU
 --Running transitions (set locked and ti)
 CREATE SEQUENCE job_id_gen;
 CREATE TABLE JOB_POOL (
-    jid     INTEGER PRIMARY KEY DEFAULT nextval('job_id_gen'::regclass),
+    jid     BIGINT PRIMARY KEY DEFAULT nextval('job_id_gen'::regclass),
     wid     INTEGER NOT NULL ,
     trname   TEXT NOT NULL,
     lckid   TEXT,
     tout    INTERVAL NOT NULL,
-    FOREIGN KEY (trname) REFERENCES WED_trig (trname) ON DELETE RESTRICT,
     FOREIGN KEY (wid) REFERENCES WED_flow (wid) ON DELETE RESTRICT
 );     
 

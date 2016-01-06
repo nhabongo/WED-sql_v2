@@ -11,40 +11,55 @@ $new_attr$
     if TD['event'] == 'INSERT':
         #--plpy.notice('Inserting new attribute: ' + TD['new']['name'])
         try:
-            plpy.execute('ALTER TABLE wed_flow ADD COLUMN ' 
-                         + plpy.quote_ident(TD['new']['name']) 
-                         + ' TEXT NOT NULL DEFAULT ' 
-                         + plpy.quote_literal(TD['new']['default_value']))
+            with plpy.subtransaction():
+                plpy.execute('ALTER TABLE wed_flow ADD COLUMN ' 
+                             + plpy.quote_ident(TD['new']['name']) 
+                             + ' TEXT NOT NULL DEFAULT ' 
+                             + plpy.quote_literal(TD['new']['default_value']))
+                plpy.execute('ALTER TABLE wed_trace ADD COLUMN '
+                             + plpy.quote_ident(TD['new']['name']) 
+                             + ' TEXT NOT NULL DEFAULT ' 
+                             + plpy.quote_literal(TD['new']['default_value']))
         except plpy.SPIError:
-            plpy.error('Could not insert new column at wed_flow')
+            plpy.error('Could not insert new column at wed_flow and/or wed_trace')
         else:
-            plpy.info('Column "'+TD['new']['name']+'" inserted into wed_flow')
+            plpy.info('Column "'+TD['new']['name']+'" inserted into wed_flow, wed_trace')
             
     elif TD['event'] == 'UPDATE':
         if TD['new']['name'] != TD['old']['name']:
             #--plpy.notice('Updating attribute name: ' + TD['old']['name'] + ' -> ' + TD['new']['name'])
             try:
-                plpy.execute('ALTER TABLE wed_flow RENAME COLUMN ' 
-                             + plpy.quote_ident(TD['old']['name']) 
-                             + ' TO ' 
-                             + plpy.quote_ident(TD['new']['name']))
+                with plpy.subtransaction():
+                    plpy.execute('ALTER TABLE wed_flow RENAME COLUMN ' 
+                                 + plpy.quote_ident(TD['old']['name']) 
+                                 + ' TO ' 
+                                 + plpy.quote_ident(TD['new']['name']))
+                    plpy.execute('ALTER TABLE wed_trace RENAME COLUMN '
+                                 + plpy.quote_ident(TD['old']['name']) 
+                                 + ' TO ' 
+                                 + plpy.quote_ident(TD['new']['name']))
             except plpy.SPIError:
-                plpy.error('Could not rename columns at wed_flow')
+                plpy.error('Could not rename columns at wed_flow and/or wed_trace')
             else:
-                plpy.info('Column name updated in wed_flow')
+                plpy.info('Column name updated in wed_flow, wed_trace')
             
         elif TD['new']['default_value'] != TD['old']['default_value']:
             #--plpy.notice('Updating attribute '+TD['old']['name']+' default value :' 
             #--            + TD['old']['default_value'] + ' -> ' + TD['new']['default_value'])
             try:
-                plpy.execute('ALTER TABLE wed_flow ALTER COLUMN ' 
-                             + plpy.quote_ident(TD['old']['name']) 
-                             + ' SET DEFAULT ' 
-                             + plpy.quote_literal(TD['new']['default_value']))
+                with plpy.subtransaction():
+                    plpy.execute('ALTER TABLE wed_flow ALTER COLUMN ' 
+                                 + plpy.quote_ident(TD['old']['name']) 
+                                 + ' SET DEFAULT ' 
+                                 + plpy.quote_literal(TD['new']['default_value']))
+                    plpy.execute('ALTER TABLE wed_trace ALTER COLUMN '
+                                 + plpy.quote_ident(TD['old']['name']) 
+                                 + ' SET DEFAULT ' 
+                                 + plpy.quote_literal(TD['new']['default_value']))
             except plpy.SPIError:
-                plpy.error('Could not insert new column into wed_flow')
+                plpy.error('Could not modify columns at wed_flow and/or wed_trace')
             else:
-                plpy.info('Column default value updated in wed_flow')
+                plpy.info('Column default value updated in wed_flow, wed_trace')
         else:
             plpy.error('UPDATE ERROR: name and or default_value must differ from previous value')
             return None
@@ -394,21 +409,21 @@ BEFORE UPDATE ON job_pool
 
 ------------------------------------------------------------------------------------------------------------------------
 -- Validate WED_pred (at least one of the wed-atributes values must be non null)
-CREATE OR REPLACE FUNCTION wed_pred_validation() RETURNS TRIGGER AS $wpv$
-    
-    if TD['event'] in ['INSERT','UPDATE']:       
-        k,v = zip(*[x for x in TD['new'].items() if x[0] not in ['pid','cid']])
-        if not any(v):
-            plpy.error('At least one WED-atribute must be non empty')
-    
-        return "OK"  
-    
-$wpv$ LANGUAGE plpython3u SECURITY DEFINER;
+--CREATE OR REPLACE FUNCTION wed_pred_validation() RETURNS TRIGGER AS $wpv$
+--    
+--    if TD['event'] in ['INSERT','UPDATE']:       
+--        k,v = zip(*[x for x in TD['new'].items() if x[0] not in ['pid','cid']])
+--        if not any(v):
+--            plpy.error('At least one WED-atribute must be non empty')
+--    
+--        return "OK"  
+--    
+--$wpv$ LANGUAGE plpython3u SECURITY DEFINER;
 
-DROP TRIGGER IF EXISTS wed_pred_val ON wed_pred;
-CREATE TRIGGER wed_pred_val
-BEFORE INSERT OR UPDATE ON wed_pred
-    FOR EACH ROW EXECUTE PROCEDURE wed_pred_validation();
+--DROP TRIGGER IF EXISTS wed_pred_val ON wed_pred;
+--CREATE TRIGGER wed_pred_val
+--BEFORE INSERT OR UPDATE ON wed_pred
+--    FOR EACH ROW EXECUTE PROCEDURE wed_pred_validation();
 
 --RESET ROLE;
 

@@ -1,0 +1,59 @@
+BEGIN;
+--Tracel agency example
+
+--WED-attributes -------------------------------------------------------------------------------------------------------
+INSERT INTO wed_attr (name) values ('air_ticket_id'),('hotel_id'),('customer_id'),('order_id');
+INSERT INTO wed_attr (name, default_value) values ('customer_status','Not Validated');
+INSERT INTO wed_attr (name, default_value) values ('air_ticket_status','Not Requested');
+INSERT INTO wed_attr (name, default_value) values ('hotel_status','Not Requested');
+INSERT INTO wed_attr (name, default_value) values ('order_status','Not Requested');
+
+--WED-conditions -------------------------------------------------------------------------------------------------------
+INSERT INTO wed_cond (cname,cdesc) values ('c_new_travel_request','request for a new travel received'),
+                                          ('c_hotel_requested','hotel reservation requested'),
+                                          ('c_air_ticket_requested','Air ticket reservation requested'),
+                                          ('c_request_treated','Both hotel and air ticket reservations confirmed');
+INSERT INTO wed_cond (final,cname,cdesc) values ('t','c_order_finalized','Done (final condition)');
+
+--Predicates definition
+INSERT INTO wed_pred (cid, order_status, customer_status) 
+    VALUES ((select cid from wed_cond where cname='c_new_travel_request'), 'received', 'not validated');
+    
+INSERT INTO wed_pred (cid, hotel_status, order_status, customer_status) 
+    VALUES ((select cid from wed_cond where cname='c_hotel_requested'), 'requested', 'validated', 'validated');
+    
+INSERT INTO wed_pred (cid, air_ticket_status, order_status, customer_status) 
+    VALUES ((select cid from wed_cond where cname='c_air_ticket_requested'), 'requested', 'validated', 'validated');
+
+INSERT INTO wed_pred (cid, air_ticket_status, hotel_status) 
+    VALUES ((select cid from wed_cond where cname='c_request_treated'), 'purchased', 'reserved');
+    
+INSERT INTO wed_pred (cid, air_ticket_status, hotel_status, order_status) 
+    VALUES ((select cid from wed_cond where cname='c_order_finalized'), 'purchased', 'reserved', 'finalized');
+
+--WED-transitions-------------------------------------------------------------------------------------------------------
+INSERT INTO wed_trans (trname,trdesc) values ('t_validate_travel_request', 'validate customer, request air ticket and hotel reservation');
+INSERT INTO wed_trans (trname,trdesc) values ('t_reserve_hotel', 'make a hotel reservation');
+INSERT INTO wed_trans (trname,trdesc) values ('t_buy_air_ticket', 'Get an airplane ticket');
+INSERT INTO wed_trans (trname,trdesc) values ('t_close_travel_request', 'Finalize travel request');
+
+--WED-triggers----------------------------------------------------------------------------------------------------------
+INSERT INTO wed_trig (cid,trid,tgname,tout) values ((select cid from wed_cond where cname='c_new_travel_request'), 
+                                             (select trid from wed_trans where trname='t_validate_travel_request'),
+                                             'wed_trigger_1','00:00:10');
+INSERT INTO wed_trig (cid,trid,tgname,tout) values ((select cid from wed_cond where cname='c_hotel_requested'), 
+                                             (select trid from wed_trans where trname='t_reserve_hotel'),
+                                             'wed_trigger_2','00:05:00');
+INSERT INTO wed_trig (cid,trid,tgname,tout) values ((select cid from wed_cond where cname='c_air_ticket_requested'), 
+                                             (select trid from wed_trans where trname='t_buy_air_ticket'),
+                                             'wed_trigger_3','00:05:00');
+INSERT INTO wed_trig (cid,trid,tgname,tout) values ((select cid from wed_cond where cname='c_request_treated'), 
+                                             (select trid from wed_trans where trname='t_close_travel_request'),
+                                             'wed_trigger_4','00:00:15');
+COMMIT;
+
+INSERT INTO wed_trig
+------------------------------------------------------------------------------------------------------------------------
+  
+
+
