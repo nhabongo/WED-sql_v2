@@ -15,4 +15,5 @@ setval('seq'::regclass, value)
 
 --condition match
 trigger on wed_trig (validate trname)
-remove any ';' before match
+remove any ';' and single quote before match
+remove CREATE, DROP, ALTER, GRANT, REVOKE, SELECT, INSERT, UPDATE, DELETE

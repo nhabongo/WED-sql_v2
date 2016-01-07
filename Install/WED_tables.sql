@@ -18,11 +18,11 @@ CREATE TABLE WED_flow (
 
 CREATE TABLE WED_attr (
     aid     SERIAL NOT NULL,
-    name    TEXT NOT NULL,
-    default_value   TEXT NOT NULL DEFAULT ''
+    aname    TEXT NOT NULL,
+    adv   TEXT
 );
 -- name must be unique 
-CREATE UNIQUE INDEX wed_attr_lower_name_idx ON WED_attr (lower(name));
+CREATE UNIQUE INDEX wed_attr_lower_name_idx ON WED_attr (lower(aname));
 
 -- use wed_pred to allow two or more diferent conditions to fire the same transition (validate trname !~ '^_')
 CREATE TABLE WED_trig (
@@ -45,7 +45,7 @@ CREATE TABLE JOB_POOL (
     wid     INTEGER NOT NULL ,
     trname   TEXT NOT NULL,
     lckid   TEXT,
-    tout    INTERVAL NOT NULL,
+    timeout    INTERVAL NOT NULL,
     FOREIGN KEY (wid) REFERENCES WED_flow (wid) ON DELETE RESTRICT
 );     
 

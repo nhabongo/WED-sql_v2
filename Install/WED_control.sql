@@ -13,17 +13,17 @@ $new_attr$
         try:
             with plpy.subtransaction():
                 plpy.execute('ALTER TABLE wed_flow ADD COLUMN ' 
-                             + plpy.quote_ident(TD['new']['name']) 
-                             + ' TEXT NOT NULL DEFAULT ' 
-                             + plpy.quote_literal(TD['new']['default_value']))
+                             + plpy.quote_ident(TD['new']['aname']) 
+                             + ' TEXT DEFAULT ' 
+                             + (plpy.quote_literal(TD['new']['adv']) if TD['new']['adv'] else 'NULL'))
                 plpy.execute('ALTER TABLE wed_trace ADD COLUMN '
-                             + plpy.quote_ident(TD['new']['name']) 
-                             + ' TEXT NOT NULL DEFAULT ' 
-                             + plpy.quote_literal(TD['new']['default_value']))
+                             + plpy.quote_ident(TD['new']['aname']) 
+                             + ' TEXT DEFAULT ' 
+                             + (plpy.quote_literal(TD['new']['adv']) if TD['new']['adv'] else 'NULL'))
         except plpy.SPIError:
             plpy.error('Could not insert new column at wed_flow and/or wed_trace')
         else:
-            plpy.info('Column "'+TD['new']['name']+'" inserted into wed_flow, wed_trace')
+            plpy.info('Column "'+TD['new']['aname']+'" inserted into wed_flow, wed_trace')
             
     elif TD['event'] == 'UPDATE':
         if TD['new']['name'] != TD['old']['name']:
@@ -31,31 +31,31 @@ $new_attr$
             try:
                 with plpy.subtransaction():
                     plpy.execute('ALTER TABLE wed_flow RENAME COLUMN ' 
-                                 + plpy.quote_ident(TD['old']['name']) 
+                                 + plpy.quote_ident(TD['old']['aname']) 
                                  + ' TO ' 
-                                 + plpy.quote_ident(TD['new']['name']))
+                                 + plpy.quote_ident(TD['new']['aname']))
                     plpy.execute('ALTER TABLE wed_trace RENAME COLUMN '
-                                 + plpy.quote_ident(TD['old']['name']) 
+                                 + plpy.quote_ident(TD['old']['aname']) 
                                  + ' TO ' 
-                                 + plpy.quote_ident(TD['new']['name']))
+                                 + plpy.quote_ident(TD['new']['aname']))
             except plpy.SPIError:
                 plpy.error('Could not rename columns at wed_flow and/or wed_trace')
             else:
                 plpy.info('Column name updated in wed_flow, wed_trace')
             
-        elif TD['new']['default_value'] != TD['old']['default_value']:
+        elif TD['new']['adv'] != TD['old']['adv']:
             #--plpy.notice('Updating attribute '+TD['old']['name']+' default value :' 
             #--            + TD['old']['default_value'] + ' -> ' + TD['new']['default_value'])
             try:
                 with plpy.subtransaction():
                     plpy.execute('ALTER TABLE wed_flow ALTER COLUMN ' 
-                                 + plpy.quote_ident(TD['old']['name']) 
+                                 + plpy.quote_ident(TD['old']['aname']) 
                                  + ' SET DEFAULT ' 
-                                 + plpy.quote_literal(TD['new']['default_value']))
+                                 + plpy.quote_literal(TD['new']['adv']))
                     plpy.execute('ALTER TABLE wed_trace ALTER COLUMN '
-                                 + plpy.quote_ident(TD['old']['name']) 
+                                 + plpy.quote_ident(TD['old']['aname']) 
                                  + ' SET DEFAULT ' 
-                                 + plpy.quote_literal(TD['new']['default_value']))
+                                 + plpy.quote_literal(TD['new']['adv']))
             except plpy.SPIError:
                 plpy.error('Could not modify columns at wed_flow and/or wed_trace')
             else:
@@ -408,22 +408,38 @@ BEFORE UPDATE ON job_pool
     FOR EACH ROW EXECUTE PROCEDURE set_job_lock();
 
 ------------------------------------------------------------------------------------------------------------------------
--- Validate WED_pred (at least one of the wed-atributes values must be non null)
---CREATE OR REPLACE FUNCTION wed_pred_validation() RETURNS TRIGGER AS $wpv$
---    
---    if TD['event'] in ['INSERT','UPDATE']:       
---        k,v = zip(*[x for x in TD['new'].items() if x[0] not in ['pid','cid']])
---        if not any(v):
---            plpy.error('At least one WED-atribute must be non empty')
---    
---        return "OK"  
---    
---$wpv$ LANGUAGE plpython3u SECURITY DEFINER;
+-- Validate predicate (cpred) and final condition on WED_trig table
+CREATE OR REPLACE FUNCTION wed_trig_validation() RETURNS TRIGGER AS $wtv$
+    
+    if TD['event'] in ['INSERT','UPDATE']:       
+        import re
+            
+        fbdtkn = re.compile(r'CREATE|DROP|ALTER|GRANT|REVOKE|SELECT|INSERT|UPDATE|DELETE|;',re.I)        
+        found = fbdtkn.search(TD['new']['cpred'])
+        if found:
+            plpy.error('Forbidden character or SQL keyword found in cpred expression: '+ found.group(0))
+            #--return "SKIP"
+        
+        if TD['new']['trname']:
+            trname = re.compile(r'^_')
+            sysname = trname.search(TD['new']['trname'])
+            if sysname:
+                plpy.error('trname must not start with an underscore character !')
+                #--return "SKIP"
+        
+        if TD['new']['cfinal']:
+            TD['new']['trname'] = TD['new']['tgname'] = TD['new']['cname'] = '_FINAL'
+            TD['new']['timeout'] = None
+            return "MODIFY"
+        else:
+            return "OK"  
+    
+$wtv$ LANGUAGE plpython3u SECURITY DEFINER;
 
---DROP TRIGGER IF EXISTS wed_pred_val ON wed_pred;
---CREATE TRIGGER wed_pred_val
---BEFORE INSERT OR UPDATE ON wed_pred
---    FOR EACH ROW EXECUTE PROCEDURE wed_pred_validation();
+DROP TRIGGER IF EXISTS wed_trig_val ON wed_trig;
+CREATE TRIGGER wed_trig_val
+BEFORE INSERT OR UPDATE ON wed_trig
+    FOR EACH ROW EXECUTE PROCEDURE wed_trig_validation();
 
 --RESET ROLE;
 
