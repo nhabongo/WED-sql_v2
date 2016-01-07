@@ -5,8 +5,8 @@
 --SET ROLE wed_admin;
 --Insert (or modify) a new WED-atribute in the apropriate tables 
 ------------------------------------------------------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION new_wed_attr() RETURNS TRIGGER AS 
-$new_attr$
+CREATE OR REPLACE FUNCTION wed_attr_handler_aft() RETURNS TRIGGER AS 
+$wah$
     #--plpy.info('Trigger "'+TD['name']+'" ('+TD['event']+','+TD['when']+') on "'+TD['table_name']+'"')
     if TD['event'] == 'INSERT':
         #--plpy.notice('Inserting new attribute: ' + TD['new']['name'])
@@ -26,7 +26,7 @@ $new_attr$
             plpy.info('Column "'+TD['new']['aname']+'" inserted into wed_flow, wed_trace')
             
     elif TD['event'] == 'UPDATE':
-        if TD['new']['name'] != TD['old']['name']:
+        if TD['new']['aname'] != TD['old']['aname']:
             #--plpy.notice('Updating attribute name: ' + TD['old']['name'] + ' -> ' + TD['new']['name'])
             try:
                 with plpy.subtransaction():
@@ -43,36 +43,33 @@ $new_attr$
             else:
                 plpy.info('Column name updated in wed_flow, wed_trace')
             
-        elif TD['new']['adv'] != TD['old']['adv']:
+        if TD['new']['adv'] != TD['old']['adv']:
             #--plpy.notice('Updating attribute '+TD['old']['name']+' default value :' 
             #--            + TD['old']['default_value'] + ' -> ' + TD['new']['default_value'])
             try:
                 with plpy.subtransaction():
                     plpy.execute('ALTER TABLE wed_flow ALTER COLUMN ' 
-                                 + plpy.quote_ident(TD['old']['aname']) 
+                                 + plpy.quote_ident(TD['new']['aname']) 
                                  + ' SET DEFAULT ' 
-                                 + plpy.quote_literal(TD['new']['adv']))
+                                 + (plpy.quote_literal(TD['new']['adv']) if TD['new']['adv'] else 'NULL'))
                     plpy.execute('ALTER TABLE wed_trace ALTER COLUMN '
-                                 + plpy.quote_ident(TD['old']['aname']) 
+                                 + plpy.quote_ident(TD['new']['aname']) 
                                  + ' SET DEFAULT ' 
-                                 + plpy.quote_literal(TD['new']['adv']))
+                                 + (plpy.quote_literal(TD['new']['adv']) if TD['new']['adv'] else 'NULL'))
             except plpy.SPIError:
                 plpy.error('Could not modify columns at wed_flow and/or wed_trace')
             else:
                 plpy.info('Column default value updated in wed_flow, wed_trace')
-        else:
-            plpy.error('UPDATE ERROR: name and or default_value must differ from previous value')
-            return None
     else:
         plpy.error('UNDEFINED EVENT')
         return None
     return None    
-$new_attr$ LANGUAGE plpython3u SECURITY DEFINER;
+$wah$ LANGUAGE plpython3u SECURITY DEFINER;
 
-DROP TRIGGER IF EXISTS new_attr ON wed_attr;
-CREATE TRIGGER new_attr
+DROP TRIGGER IF EXISTS wed_attr_trg_aft ON wed_attr;
+CREATE TRIGGER wed_attr_trg_aft
 AFTER INSERT OR UPDATE ON wed_attr
-    FOR EACH ROW EXECUTE PROCEDURE new_wed_attr();
+    FOR EACH ROW EXECUTE PROCEDURE wed_attr_handler_aft();
 
 --Insert a WED-flow modification into WED-trace (history)
 ------------------------------------------------------------------------------------------------------------------------
@@ -83,6 +80,8 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
     from datetime import datetime
     import hashlib
     
+    plpy.info(TD['args'])
+    
     #--Generates new instance trigger token ----------------------------------------------------------------------------
     def new_uptkn(trigger_name):
         salt = urandom(5)
@@ -90,26 +89,22 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
         return hash.hexdigest()
 
     #--Match predicates against the new state -------------------------------------------------------------------------
-    def pred_match(k,v):
-        attr = [x for x in k if x not in ['wid','awic']]
-        mtch = set()
-        final = False
-        try:
-            cur = plpy.cursor('select p.*, c.final from wed_pred p inner join wed_cond c on p.cid = c.cid')
-        except plpy.SPIError:
-            plpy.error('ERROR: wed_pred scan')
+    def pred_match():
+        
+        plpy.notice(SD)
+        if 'pred_plan' in SD:
+            pred_plan = SD['pred_plan']
         else:
-            #-- wed_pred must be validated to not allow all WED-attributes being NULL at once
-            for r in cur:
-                flag = True
-                for c in attr:
-                    if r[c]:
-                        flag = flag and (TD['new'][c].lower() == r[c].lower())
-                if flag:
-                    #--plpy.info('MATCHES: ',r)
-                    mtch.add(r['cid'])
-                    final = final or r['final']
-        return (mtch, final)
+            pred_plan = plpy.prepare('select * from wed_trig')
+            SD['pred_plan'] = pred_plan
+        
+        try:
+            res = plpy.execute(pred_plan)
+        except plpy.SPIError:
+            plpy.error('wed_trig scan error')
+        else:
+            for r in res:
+                plpy.info(r['cpred'])
     
     #--Fire WED-triggers given a WED-condtions set  --------------------------------------------------------------------
     def squeeze_the_trigger(cond_set, ptrg=set()):
@@ -177,40 +172,6 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
             plpy.info('Could not insert new entry into st_status')
             plpy.error(e)    
     
-    #-- Check for conditions that do not have at least one predicate ---------------------------------------------------
-    def wed_cond_validation():
-        try:
-            res = plpy.execute('select c.cid from wed_cond c left join wed_pred p on c.cid = p.cid where p.pid is null')
-        except plpy.SPIError:
-            plpy.error('Cond-Pred validation error')
-        else:
-            if len(res):
-                return False
-            return True
-    
-    #-- Check for conditions that do not fire at least one transition (ignoring final conditions)-------------------------
-    def wed_trig_validation():
-        try:
-            res = plpy.execute('select c.cid from wed_cond c left join wed_trig t '+
-                               'on c.cid = t.cid where t.tgid is null and (not c.final)')
-        except plpy.SPIError:
-            plpy.error('Cond-Trig validation error')
-        else:
-            if len(res):
-                return False
-            return True
-    
-    #-- Check if there is one and only one final condition (use WED_pred to define alternatives (boolean OR) final con-
-    #--ditions ---------------------------------------------------------------------------------------------------------           
-    def wed_final_cond_validation():
-        try:
-            res = plpy.execute('select cid from wed_cond where final')
-        except plpy.SPIError:
-            plpy.error('Final cond validation error')
-        else:
-            if not len(res):
-                return False
-            return True
     
     #-- Find job with uptkn on JOB_POOL (locked and inside timout window)-----------------------------------------------
     def find_job(uptkn):
@@ -261,18 +222,13 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
             plpy.error('Status set error on st_status table')
 
     #--(START) TRIGGER CODE --------------------------------------------------------------------------------------------
-    if not wed_final_cond_validation():
-        plpy.error('No final condition found !')
-
-    if not wed_cond_validation():
-        plpy.error('Condition without predicate found !')
-
-    if not wed_trig_validation():
-        plpy.error('Condition not associated with any transition found !')
             
     #--Only get the WED-attributes columns to insert into WED-trace-----------------------------------------------------
-    k,v = zip(*[x for x in TD['new'].items() if x[0] not in ['var_uptkn']])
+    k,v = zip(*TD['new'].items())
     
+    plpy.info(k,v)
+    pred_match()
+    return "SKIP"
     
     #-- New wed-flow instance (AFTER INSERT)----------------------------------------------------------------------------
     if TD['event'] in ['INSERT']:
@@ -359,15 +315,10 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
     #--(END) TRIGGER CODE ----------------------------------------------------------------------------------------------    
 $kt$ LANGUAGE plpython3u SECURITY DEFINER;
 
-DROP TRIGGER IF EXISTS kernel_trigger_insert ON wed_flow;
-CREATE TRIGGER kernel_trigger_insert
-AFTER INSERT ON wed_flow
-    FOR EACH ROW EXECUTE PROCEDURE kernel_function('insert');
-    
-DROP TRIGGER IF EXISTS kernel_trigger_update ON wed_flow;
-CREATE TRIGGER kernel_trigger_update
-BEFORE UPDATE ON wed_flow
-    FOR EACH ROW EXECUTE PROCEDURE kernel_function('update');
+DROP TRIGGER IF EXISTS kernel_trigger ON wed_flow;
+CREATE TRIGGER kernel_trigger
+BEFORE INSERT OR UPDATE ON wed_flow
+    FOR EACH ROW EXECUTE PROCEDURE kernel_function();
     
 ------------------------------------------------------------------------------------------------------------------------
 -- Lock a job from job_pool seting locked=True and ti = CURRENT_TIMESTAMP
@@ -409,7 +360,7 @@ BEFORE UPDATE ON job_pool
 
 ------------------------------------------------------------------------------------------------------------------------
 -- Validate predicate (cpred) and final condition on WED_trig table
-CREATE OR REPLACE FUNCTION wed_trig_validation() RETURNS TRIGGER AS $wtv$
+CREATE OR REPLACE FUNCTION wed_trig_validation_bfe() RETURNS TRIGGER AS $wtv$
     
     if TD['event'] in ['INSERT','UPDATE']:       
         import re
@@ -436,10 +387,10 @@ CREATE OR REPLACE FUNCTION wed_trig_validation() RETURNS TRIGGER AS $wtv$
     
 $wtv$ LANGUAGE plpython3u SECURITY DEFINER;
 
-DROP TRIGGER IF EXISTS wed_trig_val ON wed_trig;
-CREATE TRIGGER wed_trig_val
+DROP TRIGGER IF EXISTS wed_trig_trg_bfe ON wed_trig;
+CREATE TRIGGER wed_trig_trg_bfe
 BEFORE INSERT OR UPDATE ON wed_trig
-    FOR EACH ROW EXECUTE PROCEDURE wed_trig_validation();
+    FOR EACH ROW EXECUTE PROCEDURE wed_trig_validation_bfe();
 
 --RESET ROLE;
 

@@ -14,6 +14,13 @@ number of rows vs currval('seq')
 setval('seq'::regclass, value)
 
 --condition match
-trigger on wed_trig (validate trname)
-remove any ';' and single quote before match
-remove CREATE, DROP, ALTER, GRANT, REVOKE, SELECT, INSERT, UPDATE, DELETE
+trigger on wed_trig (validate trname) (done)
+remove any ';' and single quote before match (done)
+remove CREATE, DROP, ALTER, GRANT, REVOKE, SELECT, INSERT, UPDATE, DELETE (done)
+
+--wed_attr
+force attr names to lowercase
+
+--optimizations
+cache imports on SD global dictionary
+cache cpred
