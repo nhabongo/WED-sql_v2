@@ -89,22 +89,22 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
         return hash.hexdigest()
 
     #--Match predicates against the new state -------------------------------------------------------------------------
-    def pred_match():
-        
-        plpy.notice(SD)
-        if 'pred_plan' in SD:
-            pred_plan = SD['pred_plan']
-        else:
-            pred_plan = plpy.prepare('select * from wed_trig')
-            SD['pred_plan'] = pred_plan
+    def pred_match(wid):
         
         try:
-            res = plpy.execute(pred_plan)
+            res_wed_trig = plpy.execute('select * from wed_trig')
         except plpy.SPIError:
             plpy.error('wed_trig scan error')
         else:
-            for r in res:
-                plpy.info(r['cpred'])
+            for rt in res_wed_trig:
+                try:
+                    res_wed_flow = plpy.execute('select * from wed_flow where wid='+str(wid)+' and ('+rt['cpred']+')')
+                except plpy.SPIError:
+                    plpy.error('wed_flow scan error')
+                else:
+                    if res_wed_flow:
+                        plpy.notice(rt['trname'],rt['cpred'])
+                    
     
     #--Fire WED-triggers given a WED-condtions set  --------------------------------------------------------------------
     def squeeze_the_trigger(cond_set, ptrg=set()):
@@ -227,8 +227,8 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
     k,v = zip(*TD['new'].items())
     
     plpy.info(k,v)
-    pred_match()
-    return "SKIP"
+    pred_match(TD['new']['wid'])
+    plpy.error('NHAGA')
     
     #-- New wed-flow instance (AFTER INSERT)----------------------------------------------------------------------------
     if TD['event'] in ['INSERT']:
@@ -315,9 +315,9 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
     #--(END) TRIGGER CODE ----------------------------------------------------------------------------------------------    
 $kt$ LANGUAGE plpython3u SECURITY DEFINER;
 
-DROP TRIGGER IF EXISTS kernel_trigger ON wed_flow;
-CREATE TRIGGER kernel_trigger
-BEFORE INSERT OR UPDATE ON wed_flow
+DROP TRIGGER IF EXISTS kernel_trigger_aft ON wed_flow;
+CREATE TRIGGER kernel_trigger_aft
+AFTER INSERT OR UPDATE ON wed_flow
     FOR EACH ROW EXECUTE PROCEDURE kernel_function();
     
 ------------------------------------------------------------------------------------------------------------------------
