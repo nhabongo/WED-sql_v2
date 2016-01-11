@@ -21,6 +21,9 @@ remove CREATE, DROP, ALTER, GRANT, REVOKE, SELECT, INSERT, UPDATE, DELETE (done)
 --wed_attr
 force attr names to lowercase
 
+--wed_flow
+block update on wid
+
 --optimizations
 cache imports on SD global dictionary
 cache cpred

@@ -91,6 +91,7 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
     #--Match predicates against the new state -------------------------------------------------------------------------
     def pred_match(wid):
         
+        match_list = []
         try:
             res_wed_trig = plpy.execute('select * from wed_trig')
         except plpy.SPIError:
@@ -104,6 +105,9 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
                 else:
                     if res_wed_flow:
                         plpy.notice(rt['trname'],rt['cpred'])
+                        match_list.append(rt['trname'])
+        
+        return match_list
                     
     
     #--Fire WED-triggers given a WED-condtions set  --------------------------------------------------------------------
@@ -227,27 +231,26 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
     k,v = zip(*TD['new'].items())
     
     plpy.info(k,v)
-    pred_match(TD['new']['wid'])
+    plpy.notice(pred_match(TD['new']['wid']))
     plpy.error('NHAGA')
     
     #-- New wed-flow instance (AFTER INSERT)----------------------------------------------------------------------------
     if TD['event'] in ['INSERT']:
         
-        cond_set, final = pred_match(k,v)
-        #--plpy.info(trg_set, final)  
-        if (not cond_set) and (not final):
+        trlist = pred_match(TD['new']['wid'])
+        if (not trans_list):
             plpy.error('No predicate matches this initial WED-state, aborting ...')
         
         #-- if the initial state is a final state, do not fire any triggers
-        if not final: 
-            fired = squeeze_the_trigger(cond_set)
-            new_trace_entry(k,v,tgid_fired=fired)
-            new_st_status_entry(TD['new']['wid'])
-        else:
-            plpy.notice('Final WED-state reached (no triggers fired).')
-            new_trace_entry(k,v,final=True)
-            new_st_status_entry(TD['new']['wid'])
-            set_st_status(TD['new']['wid'])
+        #--fired = squeeze_the_trigger(trlist)
+        #--_____________________________________________________________________________________________________________________        
+        new_trace_entry(k,v,tgid_fired=fired)
+        new_st_status_entry(TD['new']['wid'])
+        #--else:
+        #--    plpy.notice('Final WED-state reached (no triggers fired).')
+        #--    new_trace_entry(k,v,final=True)
+        #--    new_st_status_entry(TD['new']['wid'])
+        #--    set_st_status(TD['new']['wid'])
             #-- Write the new state on wed_trace (tgid is the id of the trigger that lead to this state. It is null only
             #-- for initial states and exceptions)
             
