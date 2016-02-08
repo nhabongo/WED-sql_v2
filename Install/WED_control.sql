@@ -79,6 +79,7 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
     from os import urandom
     from datetime import datetime
     import hashlib
+    import json
     
     plpy.info(TD['args'])
     
@@ -91,55 +92,63 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
     #--Match predicates against the new state -------------------------------------------------------------------------
     def pred_match(wid):
         
-        match_list = []
+        trmatched = []
         try:
             res_wed_trig = plpy.execute('select * from wed_trig')
         except plpy.SPIError:
             plpy.error('wed_trig scan error')
         else:
-            for rt in res_wed_trig:
+            for tr in res_wed_trig:
                 try:
-                    res_wed_flow = plpy.execute('select * from wed_flow where wid='+str(wid)+' and ('+rt['cpred']+')')
+                    res_wed_flow = plpy.execute('select * from wed_flow where wid='+str(wid)+' and ('+tr['cpred']+')')
                 except plpy.SPIError:
                     plpy.error('wed_flow scan error')
                 else:
                     if res_wed_flow:
-                        plpy.notice(rt['trname'],rt['cpred'])
-                        match_list.append(rt['trname'])
+                        plpy.notice(tr['trname'],tr['cpred'])
+                        trmatched.append((tr['trname'],tr['timeout']))
         
-        return match_list
+        return trmatched
                     
     
     #--Fire WED-triggers given a WED-condtions set  --------------------------------------------------------------------
-    def squeeze_the_trigger(cond_set, ptrg=set()):
+    def squeeze_all_triggers(trmatched):
         
-        ftrg = set()
+        trfired = []
         
-        if not cond_set:
-            return ftrg
-
-        try:
-            cur = plpy.cursor('select * from wed_trig where cid in ('+str(cond_set).strip('{}')+')')
-        except plpy.SPIError:
-            plpy.error('ERROR: wed_trig scanning')
-        else:
-            for r in cur:
-                if r['tgid'] not in ptrg:
-                    uptkn = new_uptkn(r['tgname'].encode('utf-8'))
-                    try:
-                        plpy.execute('INSERT INTO job_pool (tgid,wid,uptkn,tout) VALUES ' + 
-                                  str((r['tgid'],TD['new']['wid'],uptkn,r['tout'])))
-                    except plpy.SPIError as e:
-                        plpy.info('ERROR inserting new entry at JOB_POOL')
-                        plpy.error(e)
-                    else:
-                        ftrg.add(r['tgid'])
-                        #--send a NOTIFY notification for the newly created job (will fail if the notification queue is full)
-                        try:
-                            plpy.execute('NOTIFY WTRG_'+str(r['tgid'])+',\'{"tgid":'+str(r['tgid'])+',"wid":'+str(TD['new']['wid'])+',"uptkn":"'+uptkn+'"}\'')
-                        except plpy.SPIError:
-                            plpy.notice('Notification queue NEW_JOB full !')
-        return ftrg            
+        if ('_FINAL',None) in trmatched:
+            return trfired
+        
+        payload = TD['new'].copy()
+        wid = payload['wid']
+        del payload['wid']
+        
+        plan = plpy.prepare('insert into job_pool (wid,trname,timeout,payload) values ($1,$2,$3,$4)',['integer','text','interval','json'])
+        
+        for trname,timeout in trmatched:
+            try:
+                plpy.execute(plan,[wid,trname,timeout,json.dumps(payload)])
+            except plpy.SPIError as e:
+                plpy.info('INSERT ERROR: JOB_POOL', e)
+                #--pass
+            else:
+                trfired.append(trname)
+                try:
+                    plpy.execute('NOTIFY '+trname+', \''+json.dumps(TD['new'])+'\'')
+                except plpy.SPIError as e:
+                    plpy.notice('Notification error:',e)
+                    
+        return trfired
+                
+            
+    
+    
+    
+    
+    
+    
+    
+                  
     #--Create a new entry on history (WED_trace table) -----------------------------------------------------------------
     def new_trace_entry(k,v,tgid_wrote=False,final=False,excpt=False,tgid_fired=False):
         if tgid_wrote:
@@ -231,15 +240,19 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
     k,v = zip(*TD['new'].items())
     
     plpy.info(k,v)
-    plpy.notice(pred_match(TD['new']['wid']))
-    plpy.error('NHAGA')
+    #--plpy.error('NHAGA')
     
     #-- New wed-flow instance (AFTER INSERT)----------------------------------------------------------------------------
     if TD['event'] in ['INSERT']:
         
-        trlist = pred_match(TD['new']['wid'])
-        if (not trans_list):
+        trmatched = pred_match(TD['new']['wid'])
+        if (not trmatched):
             plpy.error('No predicate matches this initial WED-state, aborting ...')
+        
+        #--TODO: check for _FINAL
+        trfired = squeeze_all_triggers(trmatched)
+        plpy.notice(trmatched,trfired)
+        return "OK"
         
         #-- if the initial state is a final state, do not fire any triggers
         #--fired = squeeze_the_trigger(trlist)
