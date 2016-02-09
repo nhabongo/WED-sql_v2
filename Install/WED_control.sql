@@ -11,55 +11,40 @@ $wah$
     if TD['event'] == 'INSERT':
         #--plpy.notice('Inserting new attribute: ' + TD['new']['name'])
         try:
-            with plpy.subtransaction():
-                plpy.execute('ALTER TABLE wed_flow ADD COLUMN ' 
-                             + plpy.quote_ident(TD['new']['aname']) 
-                             + ' TEXT DEFAULT ' 
-                             + (plpy.quote_literal(TD['new']['adv']) if TD['new']['adv'] else 'NULL'))
-                plpy.execute('ALTER TABLE wed_trace ADD COLUMN '
-                             + plpy.quote_ident(TD['new']['aname']) 
-                             + ' TEXT DEFAULT ' 
-                             + (plpy.quote_literal(TD['new']['adv']) if TD['new']['adv'] else 'NULL'))
+            plpy.execute('ALTER TABLE wed_flow ADD COLUMN ' 
+                         + plpy.quote_ident(TD['new']['aname']) 
+                         + ' TEXT DEFAULT ' 
+                         + (plpy.quote_literal(TD['new']['adv']) if TD['new']['adv'] else 'NULL'))
         except plpy.SPIError:
-            plpy.error('Could not insert new column at wed_flow and/or wed_trace')
+            plpy.error('Could not insert new column at wed_flow')
         else:
-            plpy.info('Column "'+TD['new']['aname']+'" inserted into wed_flow, wed_trace')
+            plpy.info('Column "'+TD['new']['aname']+'" inserted into wed_flow')
             
     elif TD['event'] == 'UPDATE':
         if TD['new']['aname'] != TD['old']['aname']:
             #--plpy.notice('Updating attribute name: ' + TD['old']['name'] + ' -> ' + TD['new']['name'])
             try:
-                with plpy.subtransaction():
-                    plpy.execute('ALTER TABLE wed_flow RENAME COLUMN ' 
-                                 + plpy.quote_ident(TD['old']['aname']) 
-                                 + ' TO ' 
-                                 + plpy.quote_ident(TD['new']['aname']))
-                    plpy.execute('ALTER TABLE wed_trace RENAME COLUMN '
-                                 + plpy.quote_ident(TD['old']['aname']) 
-                                 + ' TO ' 
-                                 + plpy.quote_ident(TD['new']['aname']))
+                plpy.execute('ALTER TABLE wed_flow RENAME COLUMN ' 
+                             + plpy.quote_ident(TD['old']['aname']) 
+                             + ' TO ' 
+                             + plpy.quote_ident(TD['new']['aname']))
             except plpy.SPIError:
-                plpy.error('Could not rename columns at wed_flow and/or wed_trace')
+                plpy.error('Could not rename columns at wed_flow')
             else:
-                plpy.info('Column name updated in wed_flow, wed_trace')
+                plpy.info('Column name updated in wed_flow')
             
         if TD['new']['adv'] != TD['old']['adv']:
             #--plpy.notice('Updating attribute '+TD['old']['name']+' default value :' 
             #--            + TD['old']['default_value'] + ' -> ' + TD['new']['default_value'])
             try:
-                with plpy.subtransaction():
-                    plpy.execute('ALTER TABLE wed_flow ALTER COLUMN ' 
-                                 + plpy.quote_ident(TD['new']['aname']) 
-                                 + ' SET DEFAULT ' 
-                                 + (plpy.quote_literal(TD['new']['adv']) if TD['new']['adv'] else 'NULL'))
-                    plpy.execute('ALTER TABLE wed_trace ALTER COLUMN '
-                                 + plpy.quote_ident(TD['new']['aname']) 
-                                 + ' SET DEFAULT ' 
-                                 + (plpy.quote_literal(TD['new']['adv']) if TD['new']['adv'] else 'NULL'))
+                plpy.execute('ALTER TABLE wed_flow ALTER COLUMN ' 
+                             + plpy.quote_ident(TD['new']['aname']) 
+                             + ' SET DEFAULT ' 
+                             + (plpy.quote_literal(TD['new']['adv']) if TD['new']['adv'] else 'NULL'))
             except plpy.SPIError:
-                plpy.error('Could not modify columns at wed_flow and/or wed_trace')
+                plpy.error('Could not modify columns at wed_flow')
             else:
-                plpy.info('Column default value updated in wed_flow, wed_trace')
+                plpy.info('Column default value updated in wed_flow')
     else:
         plpy.error('UNDEFINED EVENT')
         return None
@@ -109,7 +94,13 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
                         trmatched.append((tr['trname'],tr['timeout']))
         
         return trmatched
-                    
+   
+    def json_wed_state():
+        payload = TD['new'].copy()
+        del payload['wid']
+        
+        return json.dumps(payload)
+        
     
     #--Fire WED-triggers given a WED-condtions set  --------------------------------------------------------------------
     def squeeze_all_triggers(trmatched):
@@ -119,15 +110,14 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
         if ('_FINAL',None) in trmatched:
             return trfired
         
-        payload = TD['new'].copy()
-        wid = payload['wid']
-        del payload['wid']
+        wid = TD['new']['wid']
+        payload = json_wed_state()
         
         plan = plpy.prepare('insert into job_pool (wid,trname,timeout,payload) values ($1,$2,$3,$4)',['integer','text','interval','json'])
         
         for trname,timeout in trmatched:
             try:
-                plpy.execute(plan,[wid,trname,timeout,json.dumps(payload)])
+                plpy.execute(plan,[wid,trname,timeout,payload])
             except plpy.SPIError as e:
                 plpy.info('INSERT ERROR: JOB_POOL', e)
                 #--pass
@@ -140,47 +130,22 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
                     
         return trfired
                 
-            
-    
-    
-    
-    
-    
-    
-    
-                  
     #--Create a new entry on history (WED_trace table) -----------------------------------------------------------------
-    def new_trace_entry(k,v,tgid_wrote=False,final=False,excpt=False,tgid_fired=False):
-        if tgid_wrote:
-            k = k + ('tgid_wrote',)
-            v = v + (tgid_wrote,)
+    def new_trace_entry(trw=None,trf=None,final=False,excpt=False):
+     
+        payload = json_wed_state()
         
-        if final:
-            k = k + ('final',)
-            v = v + (True,)
-            
-        if excpt:
-            k = k + ('excpt',)
-            v = v + (True,)
-            
-        if tgid_fired:
-            k = k + ('tgid_fired',)
-            v = v + (str(tgid_fired),)
-        
-        wed_columns = str(k).replace('\'','')
-        wed_values = str(v)
-        #--plpy.info(wed_columns,wed_values)
-        
+        plan = plpy.prepare('INSERT INTO wed_trace (wid,trw,trf,final,excpt,state) VALUES ($1,$2,$3,$4,$5,$6)',['integer','text','text[]','bool','bool','json'])
         try:
-            plpy.execute('INSERT INTO wed_trace ' + wed_columns + ' VALUES ' + wed_values)
+            plpy.execute(plan, [TD['new']['wid'],trw,trf,final,excpt,payload])
         except plpy.SPIError as e:
             plpy.info('Could not insert new entry into wed_trace')
             plpy.error(e)
     
     #-- Create a new entry on ST_STATUS for fast detecting final states ------------------------------------------------
-    def new_st_status_entry(wid):
+    def new_st_status_entry():
         try:
-            plpy.execute('INSERT INTO st_status (wid) VALUES (' + str(wid) + ')')
+            plpy.execute('INSERT INTO st_status (wid) VALUES (' + str(TD['new']['wid']) + ')')
         except plpy.SPIError as e:
             plpy.info('Could not insert new entry into st_status')
             plpy.error(e)    
@@ -228,9 +193,9 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
                 return (res[0]['final'],res[0]['excpt'])
     
     #-- Set an WED-state status (final or not final)
-    def set_st_status(wid,final=True,excpt=False):
+    def set_st_status(final=True,excpt=False):
         try:
-            res = plpy.execute('update st_status set final='+str(final)+',excpt='+str(excpt)+' where wid='+str(wid))
+            res = plpy.execute('update st_status set final='+str(final)+',excpt='+str(excpt)+' where wid='+str(TD['new']['wid']))
         except plpy.SPIError:
             plpy.error('Status set error on st_status table')
 
@@ -246,26 +211,19 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
     if TD['event'] in ['INSERT']:
         
         trmatched = pred_match(TD['new']['wid'])
+        final = ('_FINAL',None) in trmatched
+        
         if (not trmatched):
             plpy.error('No predicate matches this initial WED-state, aborting ...')
         
-        #--TODO: check for _FINAL
         trfired = squeeze_all_triggers(trmatched)
-        plpy.notice(trmatched,trfired)
+        new_st_status_entry()
+        
+        new_trace_entry(trf=trfired, final=final)
+        set_st_status(final=final)
+        
         return "OK"
         
-        #-- if the initial state is a final state, do not fire any triggers
-        #--fired = squeeze_the_trigger(trlist)
-        #--_____________________________________________________________________________________________________________________        
-        new_trace_entry(k,v,tgid_fired=fired)
-        new_st_status_entry(TD['new']['wid'])
-        #--else:
-        #--    plpy.notice('Final WED-state reached (no triggers fired).')
-        #--    new_trace_entry(k,v,final=True)
-        #--    new_st_status_entry(TD['new']['wid'])
-        #--    set_st_status(TD['new']['wid'])
-            #-- Write the new state on wed_trace (tgid is the id of the trigger that lead to this state. It is null only
-            #-- for initial states and exceptions)
             
 
     #-- Updating an WED-state (BEFORE UPDATE)---------------------------------------------------------------------------
