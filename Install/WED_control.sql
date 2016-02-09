@@ -91,11 +91,12 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
                 else:
                     if res_wed_flow:
                         plpy.notice(tr['trname'],tr['cpred'])
-                        trmatched.append((tr['trname'],tr['timeout']))
+                        trmatched.append((tr['trname'],tr['tgid'],tr['timeout']))
         
         return trmatched
    
     def json_wed_state():
+        
         payload = TD['new'].copy()
         del payload['wid']
         
@@ -107,24 +108,25 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
         
         trfired = []
         
-        if ('_FINAL',None) in trmatched:
+        if '_FINAL' in [x[0] for x in trmatched if x[0] == '_FINAL']:
             return trfired
         
         wid = TD['new']['wid']
         payload = json_wed_state()
         
-        plan = plpy.prepare('insert into job_pool (wid,trname,timeout,payload) values ($1,$2,$3,$4)',['integer','text','interval','json'])
+        plan = plpy.prepare('insert into job_pool (wid,tgid,trname,timeout,payload) values ($1,$2,$3,$4,$5)',['integer','integer','text','interval','json'])
         
-        for trname,timeout in trmatched:
+        for trname,tgid,timeout in trmatched:
             try:
-                plpy.execute(plan,[wid,trname,timeout,payload])
+                plpy.execute(plan,[wid,tgid,trname,timeout,payload])
             except plpy.SPIError as e:
                 plpy.info('INSERT ERROR: JOB_POOL', e)
-                #--pass
+                #--TODO: --pass
             else:
                 trfired.append(trname)
+                key= {'wid':wid,'tgid':tgid}
                 try:
-                    plpy.execute('NOTIFY '+trname+', \''+json.dumps(TD['new'])+'\'')
+                    plpy.execute('NOTIFY '+trname+', \'{"key":'+json.dumps(key)+',"payload":'+payload+'}\'')
                 except plpy.SPIError as e:
                     plpy.notice('Notification error:',e)
                     
@@ -199,19 +201,23 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
         except plpy.SPIError:
             plpy.error('Status set error on st_status table')
 
+    def get_worker_pid():
+        try:
+            res = plpy.execute('select pg_backend_pid() as pid')
+        except plpy.SPIError:
+            plpy.error('Error: identifying worker !')
+        
+        return res[0]['pid']
+        
     #--(START) TRIGGER CODE --------------------------------------------------------------------------------------------
-            
-    #--Only get the WED-attributes columns to insert into WED-trace-----------------------------------------------------
-    k,v = zip(*TD['new'].items())
-    
-    plpy.info(k,v)
-    #--plpy.error('NHAGA')
+
+    plpy.info(get_worker_pid())            
     
     #-- New wed-flow instance (AFTER INSERT)----------------------------------------------------------------------------
     if TD['event'] in ['INSERT']:
         
         trmatched = pred_match(TD['new']['wid'])
-        final = ('_FINAL',None) in trmatched
+        final = '_FINAL' in [x[0] for x in trmatched if x[0] == '_FINAL']
         
         if (not trmatched):
             plpy.error('No predicate matches this initial WED-state, aborting ...')
@@ -219,7 +225,7 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
         trfired = squeeze_all_triggers(trmatched)
         new_st_status_entry()
         
-        new_trace_entry(trf=trfired, final=final)
+        new_trace_entry(trw='_INIT',trf=trfired, final=final)
         set_st_status(final=final)
         
         return "OK"

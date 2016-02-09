@@ -40,12 +40,14 @@ CREATE UNIQUE INDEX wed_trig_cfinal_idx ON WED_trig (cfinal) WHERE cfinal is TRU
 --Running transitions
 CREATE TABLE JOB_POOL (
     wid     INTEGER NOT NULL ,
+    tgid    INTEGER NOT NULL,
     trname   TEXT NOT NULL,
     lckid   TEXT,
     timeout    INTERVAL NOT NULL,
     payload JSON NOT NULL,
-    PRIMARY KEY (wid,trname),
-    FOREIGN KEY (wid) REFERENCES WED_flow (wid) ON DELETE RESTRICT
+    PRIMARY KEY (wid,tgid),
+    FOREIGN KEY (wid) REFERENCES WED_flow (wid) ON DELETE RESTRICT,
+    FOREIGN KEY (tgid) REFERENCES WED_trig (tgid) ON DELETE RESTRICT
 );     
 
 --Fast final WED-state detection
