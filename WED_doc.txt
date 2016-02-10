@@ -27,3 +27,9 @@ block update on wid
 --optimizations
 cache imports on SD global dictionary
 cache cpred
+
+--lock mechanism
+begin;
+select pg_try_advisory_xact_lock(wid,tgid);
+update wed_flow set ... where wid=...;
+commit;
