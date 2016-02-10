@@ -50,11 +50,10 @@ CREATE TABLE JOB_POOL (
     FOREIGN KEY (tgid) REFERENCES WED_trig (tgid) ON DELETE RESTRICT
 );     
 
---Fast final WED-state detection
+--Fast final WED-state detection(Running,Final,Exception)
 CREATE TABLE ST_STATUS (
     wid     INTEGER PRIMARY KEY,
-    final   BOOL NOT NULL DEFAULT FALSE,
-    excpt   BOOL NOT NULL DEFAULT FALSE,
+    status  TEXT NOT NULL DEFAULT 'R',
     FOREIGN KEY (wid) REFERENCES WED_flow (wid) ON DELETE RESTRICT
 );
 
@@ -63,8 +62,7 @@ CREATE TABLE WED_trace (
     wid     INTEGER,
     trw    TEXT DEFAULT NULL,
     trf    TEXT[] DEFAULT NULL,
-    final    BOOL NOT NULL DEFAULT FALSE,
-    excpt    BOOL NOT NULL DEFAULT FALSE,
+    status    TEXT NOT NULL DEFAULT 'R',
     tstmp      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     state      JSON NOT NULL,
     FOREIGN KEY (wid) REFERENCES WED_flow (wid) ON DELETE RESTRICT

@@ -74,7 +74,7 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
         return hash.hexdigest()
 
     #--Match predicates against the new state -------------------------------------------------------------------------
-    def pred_match(wid):
+    def pred_match():
         
         trmatched = []
         try:
@@ -84,7 +84,7 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
         else:
             for tr in res_wed_trig:
                 try:
-                    res_wed_flow = plpy.execute('select * from wed_flow where wid='+str(wid)+' and ('+tr['cpred']+')')
+                    res_wed_flow = plpy.execute('select * from wed_flow where wid='+str(TD['new']['wid'])+' and ('+tr['cpred']+')')
                 except plpy.SPIError:
                     plpy.error('wed_flow scan error')
                 else:
@@ -99,13 +99,15 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
         
         return json.dumps(payload)
         
-    
+    def is_final(trmatched):
+        return '_FINAL' in [x[0] for x in trmatched if x[0] == '_FINAL']
+        
     #--Fire WED-triggers given a WED-condtions set  --------------------------------------------------------------------
     def squeeze_all_triggers(trmatched):
         
         trfired = []
         
-        if '_FINAL' in [x[0] for x in trmatched if x[0] == '_FINAL']:
+        if is_final(trmatched):
             return trfired
         
         wid = TD['new']['wid']
@@ -116,9 +118,9 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
         for trname,tgid,timeout in trmatched:
             try:
                 plpy.execute(plan,[wid,tgid,trname,timeout,payload])
-            except spliexceptions.UniqueViolation:
-                plpy.info('UNIQUE VIOLAtioN: JOB_POOL')
-                #--TODO: --pass
+            except spiexceptions.UniqueViolation:
+                #--plpy.info('UNIQUE VIOLAtioN: JOB_POOL')
+                pass
             except plpy.SPIError as e:
                 plpy.error(e)
             else:
@@ -132,13 +134,13 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
         return trfired
                 
     #--Create a new entry on history (WED_trace table) -----------------------------------------------------------------
-    def new_trace_entry(trw=None,trf=None,final=False,excpt=False):
+    def new_trace_entry(trw=None,trf=None,status='R'):
      
         payload = json_wed_state()
         
-        plan = plpy.prepare('INSERT INTO wed_trace (wid,trw,trf,final,excpt,state) VALUES ($1,$2,$3,$4,$5,$6)',['integer','text','text[]','bool','bool','json'])
+        plan = plpy.prepare('INSERT INTO wed_trace (wid,trw,trf,status,state) VALUES ($1,$2,$3,$4,$5)',['integer','text','text[]','text','json'])
         try:
-            plpy.execute(plan, [TD['new']['wid'],trw,trf,final,excpt,payload])
+            plpy.execute(plan, [TD['new']['wid'],trw,trf,status,payload])
         except plpy.SPIError as e:
             plpy.info('Could not insert new entry into wed_trace')
             plpy.error(e)
@@ -188,30 +190,31 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
             plpy.error(e)
                    
     #-- scan job_pool for pending transitions for WED-flow instance wid
-    def running_triggers(wid):
+    def check_for_pending_jobs():
         try:
-            res = plpy.execute('select tgid from job_pool where wid='+str(wid)+' and tf is null')
+            res = plpy.execute('select wid from job_pool where wid='+str(TD['new']['wid']))
         except plpy.SPIError:
             plpy.error('ERROR: job_pool scanning')
-        else:
-            return {x['tgid'] for x in res}
+        
+        return True if len(res) > 0 else False
+        
     
     #-- Check if a given wed-flow instance is already on a final state -------------------------------------------------
-    def get_st_status(wid):
+    def get_st_status():
         try:
-            res = plpy.execute('select final,excpt from st_status where wid='+str(wid))
+            res = plpy.execute('select status from st_status where wid='+str(TD['new']['wid']))
         except plpy.SPIError:
             plpy.error('Reading st_status')
         else:
             if not len(res):
                 plpy.error('wid not found !')
             else:
-                return (res[0]['final'],res[0]['excpt'])
+                return res[0]['status']
     
     #-- Set an WED-state status (final or not final)
-    def set_st_status(final=True,excpt=False):
+    def set_st_status(status='R'):
         try:
-            res = plpy.execute('update st_status set final='+str(final)+',excpt='+str(excpt)+' where wid='+str(TD['new']['wid']))
+            res = plpy.execute('update st_status set status=\''+status+'\' where wid='+str(TD['new']['wid']))
         except plpy.SPIError:
             plpy.error('Status set error on st_status table')
 
@@ -239,44 +242,66 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
     #-- New wed-flow instance (AFTER INSERT)----------------------------------------------------------------------------
     if TD['event'] in ['INSERT']:
         
-        trmatched = pred_match(TD['new']['wid'])
-        final = '_FINAL' in [x[0] for x in trmatched if x[0] == '_FINAL']
+        trmatched = pred_match()
         
         if (not trmatched):
             plpy.error('No predicate matches this initial WED-state, aborting ...')
         
+        if is_final(trmatched):
+            status = 'F'
+        else:
+            status = 'R'
+        
         trfired = squeeze_all_triggers(trmatched)
         new_st_status_entry()
         
-        new_trace_entry(trw='_INIT',trf=trfired, final=final)
-        set_st_status(final=final)
+        new_trace_entry('_INIT',trfired,status)
+        set_st_status(status)
         
         return "OK"
         
             
 
-    #-- Updating an WED-state (BEFORE UPDATE)---------------------------------------------------------------------------
+    #-- Updating an WED-state ------------------------------------------------------------------------------------------
     elif TD['event'] in ['UPDATE']:
         
-        final, excpt = get_st_status(TD['new']['wid'])
+        status = get_st_status()
         
-        if final and not excpt:
+        if status == 'F':
             plpy.error('Cannot modify a final WED-state !')
-            
+        
+        #-- check if the transaction is the same that set the advisory lock (transaction still open)
         pid = get_worker_pid()
         job =  find_job(pid)
         
         if not job:
             plpy.error('Job not found !')
-        else:
-            plpy.info(job)
         
         if job[0] != TD['new']['wid']:
             plpy.error('Invalid update !')
         
         #--TODO: validations and match
-        
+        trmatched = pred_match()
         remove_job(job[0],job[1])
+        trfired = squeeze_all_triggers(trmatched)
+        
+        
+        final = is_final(trmatched)
+        pj = check_for_pending_jobs()
+        
+        
+        if final and pj:
+            plpy.error('Impossible to set a final WED-state if there are others pending WED-transactions for this instance')
+        elif not (trfired or pj or final):
+            plpy.info('Inconsistent WED-state detected')
+            status = 'E'
+            #--lanch an exception job
+            squeeze_all_triggers([('_EXCPT',job[1],'01:00:00')])
+        else:
+            status = 'F' if final else 'R'
+        
+        new_trace_entry(job[2],trfired,status)
+        set_st_status(status)
         
         return "OK"
         
