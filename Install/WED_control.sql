@@ -280,7 +280,7 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
         if job[0] != TD['new']['wid']:
             plpy.error('Invalid update !')
         
-        #--TODO: validations and match
+        #--validations and match
         trmatched = pred_match()
         remove_job(job[0],job[1])
         trfired = squeeze_all_triggers(trmatched)

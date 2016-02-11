@@ -4,7 +4,7 @@ import sys,time
 class MyWorker(BaseClass):
     
     #trname and dbs variables are static in order to conform with the definition of wed_trans()    
-    trname = 'tr1'
+    trname = 'tr_a2'
     dbs = 'user=wed_admin dbname=sandbox'
     wakeup_interval = 5
     

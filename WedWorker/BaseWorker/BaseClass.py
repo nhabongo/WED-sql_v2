@@ -16,17 +16,26 @@ class BaseClass(metaclass=ABCMeta):
         self.trname = trname
         self.dbs = dbs
         self.wkupint = wakeup_interval
-        self.wed_cond = self.get_wed_cond(trname)
+        self.wed_cond = self.__get_wed_cond(trname,dbs)
+
     #-------------------------------------------------------------------------------------------------------------------
     @staticmethod
-    def get_wed_cond(trname):
-        #TODO
-        #get WED-condition from database
-        return "a1='r'"
+    def __get_wed_cond(trname,dbs):
+
+        job_conn = psycopg2.connect(dbs)
+        curs = job_conn.cursor()
+        curs.execute('select cpred from wed_trig where trname = %s',[trname])
+        
+        if curs.rowcount != 1:
+            raise psycopg2.DataError('WED-transition not found')
+        
+        return curs.fetchone()[0]
+            
     #-------------------------------------------------------------------------------------------------------------------
     @abstractmethod
     def wed_trans(self):
         pass
+
     #-------------------------------------------------------------------------------------------------------------------    
     def job_lookup(self):
         try:

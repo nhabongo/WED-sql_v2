@@ -33,3 +33,6 @@ begin;
 select pg_try_advisory_xact_lock(wid,tgid);
 update wed_flow set ... where wid=...;
 commit;
+
+--features
+it is possible to go from one inconsistent state to another inconsistent state
