@@ -125,9 +125,9 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
                 plpy.error(e)
             else:
                 trfired.append(trname)
-                key= {'wid':wid,'tgid':tgid}
+                msg = {'wid':wid,'tgid':tgid, 'timeout':timeout, 'payload':payload}
                 try:
-                    plpy.execute('NOTIFY '+trname+', \'{"key":'+json.dumps(key)+',"payload":'+payload+'}\'')
+                    plpy.execute('NOTIFY '+trname+', \''+json.dumps(msg)+'\'')
                 except plpy.SPIError as e:
                     plpy.notice('Notification error:',e)
                     
@@ -314,43 +314,6 @@ CREATE TRIGGER kernel_trigger
 AFTER INSERT OR UPDATE ON wed_flow
     FOR EACH ROW EXECUTE PROCEDURE kernel_function();
     
-------------------------------------------------------------------------------------------------------------------------
--- Lock a job from job_pool seting locked=True and ti = CURRENT_TIMESTAMP
-CREATE OR REPLACE FUNCTION set_job_lock() RETURNS TRIGGER AS $pv$
-    
-    from datetime import datetime
-       
-    #--plpy.info(TD['new'])
-    #--plpy.info(TD['old'])
-   
-    if TD['old']['locked']:
-        #--aborted a previously locked job
-        if TD['new']['aborted'] and not TD['old']['aborted']:
-            TD['new'] = TD['old']
-            TD['new']['aborted'] = True
-            TD['new']['tf'] = datetime.now()
-        else:
-            plpy.error('Job \''+TD['new']['uptkn']+'\' already locked or aborted, aborting ...')
-    
-    elif TD['new']['locked']:
-        #-- allow update only on 'locked' an 'lckid' columns
-        lckid = TD['new']['lckid']
-        TD['new'] = TD['old']
-        TD['new']['lckid'] = lckid
-        TD['new']['locked'] = True
-        TD['new']['aborted'] = False
-        TD['new']['ti'] = datetime.now()
-    else:
-        return "SKIP"   
-    
-    return "MODIFY"  
-    
-$pv$ LANGUAGE plpython3u SECURITY DEFINER;
-
-DROP TRIGGER IF EXISTS lock_job ON job_pool;
-CREATE TRIGGER lock_job
-BEFORE UPDATE ON job_pool
-    FOR EACH ROW EXECUTE PROCEDURE set_job_lock();
 
 ------------------------------------------------------------------------------------------------------------------------
 -- Validate predicate (cpred) and final condition on WED_trig table

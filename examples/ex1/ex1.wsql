@@ -3,7 +3,7 @@ BEGIN;
 INSERT INTO wed_attr (aname, adv) values ('a1','ready');
 INSERT INTO wed_attr (aname) values ('a2'),('a3');
 
-INSERT INTO wed_trig (tgname,trname,cname,cpred,timeout) values ('t1','tr_a2','c1', $$a1='ready' and (a2 is null)$$,'00:00:30');
+INSERT INTO wed_trig (tgname,trname,cname,cpred,timeout) values ('t1','tr_a2','c1', $$a1='ready' and (a2 is null)$$,'3d18h');
 INSERT INTO wed_trig (tgname,trname,cname,cpred,timeout) values ('t2','tr_a3','c2', $$a1='ready' and (a3 is null)$$,'00:00:30');
 INSERT INTO wed_trig (tgname,trname,cname,cpred,timeout) values ('tf','tr_final','cf', $$a1='ready' and (a2 is not null) and (a3 is not null)$$,'00:00:10');
 INSERT INTO wed_trig (cpred,cfinal) values ($$a1 <> 'ready'$$, True);
