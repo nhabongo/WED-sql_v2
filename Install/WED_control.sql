@@ -164,7 +164,7 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
         dbid = res[0]['oid']
         
         try:
-            res = plpy.execute('select classid,objid from pg_locks where locktype=\'advisory\' and database='+str(dbid)+' and pid='+str(pid))
+            res = plpy.execute('select classid,objid from pg_locks where locktype=\'advisory\' and granted and database='+str(dbid)+' and pid='+str(pid))
         except plpy.SPIError as e:
             plpy.error(e)
         
