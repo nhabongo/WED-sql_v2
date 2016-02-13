@@ -66,12 +66,11 @@ echo -e "GRANT USAGE ON SCHEMA public TO $USER;
          GRANT SELECT ON st_status to $USER;
          GRANT SELECT ON wed_trace to $USER;
          GRANT SELECT,INSERT,UPDATE ON wed_attr to $USER;
-         GRANT SELECT,INSERT,UPDATE ON wed_cond to $USER;
-         GRANT SELECT,INSERT,UPDATE ON wed_pred to $USER;
-         GRANT SELECT,INSERT,UPDATE ON wed_trans to $USER;
          GRANT SELECT,INSERT,UPDATE ON wed_trig to $USER;
          GRANT SELECT,INSERT,UPDATE ON wed_flow to $USER;
          GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public to $USER;
+         REVOKE ALL ON FUNCTION trcheck() FROM public;
+         REVOKE EXECUTE ON FUNCTION trcheck() FROM $USER;
          GRANT USAGE ON ALL SEQUENCES IN SCHEMA public to $USER;" > tmp_priv
 sudo -u postgres psql -q -d $DB -f tmp_priv
 rm tmp_priv

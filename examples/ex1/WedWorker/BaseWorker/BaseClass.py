@@ -82,7 +82,7 @@ class BaseClass(metaclass=ABCMeta):
                 try:
                     curs.execute('update wed_flow set '+new_wed_state+' where wid=%s',[data['wid']])
                 except Exception as e:
-                    print(e.diag.message_primary)
+                    print(e)
                 else:
                     job_conn.commit()
                     print("[\033[33m%s\033[0m] wid=%d updated !" %(self.trname,data['wid']),flush=True)

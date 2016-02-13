@@ -98,7 +98,7 @@ wed_worker_main(Datum main_arg)
 		 MyBgworkerEntry->bgw_name, wed_worker_db_name);
 
 	initStringInfo(&buf);
-	appendStringInfo(&buf, "SELECT job_inspector()");
+	appendStringInfo(&buf, "SELECT trcheck()");
 
 	/*
 	 * Main loop: do this until the SIGTERM handler tells us to terminate
@@ -158,9 +158,9 @@ wed_worker_main(Datum main_arg)
 		ret = SPI_execute(buf.data, false, 0);
 
 		if (ret != SPI_OK_SELECT)
-			elog(FATAL, "stored procedure job_inspector() not found: error code %d", ret);
+			elog(FATAL, "stored procedure trcheck() not found: error code %d", ret);
 
-        elog(LOG, "%s : job_inspector() done !", MyBgworkerEntry->bgw_name);
+        elog(LOG, "%s : trcheck() done !", MyBgworkerEntry->bgw_name);
 		/*
 		 * And finish our transaction.
 		 */
@@ -239,7 +239,7 @@ _PG_init(void)
 	 */
 	for (i = 1; i <= wed_worker_total_workers; i++)
 	{
-		snprintf(worker.bgw_name, BGW_MAXLEN, "wed_worker %d", i);
+		snprintf(worker.bgw_name, BGW_MAXLEN, "ww[%s] %d", wed_worker_db_name, i);
 		worker.bgw_main_arg = Int32GetDatum(i);
 		RegisterBackgroundWorker(&worker);
 	}
