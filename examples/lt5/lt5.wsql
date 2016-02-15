@@ -1,0 +1,10 @@
+BEGIN;
+
+INSERT INTO wed_attr (aname, adv) values ('a1','0'),('a2','0'),('a3','0');
+
+INSERT INTO wed_trig (tgname,trname,cname,cpred,timeout) values ('t1','tr_a1','c1', $$a1::integer < 3 $$,'3d18h');
+INSERT INTO wed_trig (tgname,trname,cname,cpred,timeout) values ('t2','tr_a2','c2', $$a2::integer < 4 $$,'00:00:30');
+INSERT INTO wed_trig (tgname,trname,cname,cpred,timeout) values ('t2','tr_a3','c3', $$a3::integer < 5 $$,'00:00:30');
+INSERT INTO wed_trig (cpred,cfinal) values ($$a1='3' and a2='4' and a3='5'$$, True);
+
+COMMIT;

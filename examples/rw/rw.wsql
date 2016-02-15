@@ -1,0 +1,12 @@
+BEGIN;
+
+INSERT INTO wed_attr (aname, adv) values ('a1','0'),('a2','0'),('a3','0'),('a4','1'),('a5','0'),('a6','0'),('a7','0');
+
+INSERT INTO wed_trig (tgname,trname,cname,cpred,timeout) 
+values ('t1','tr_rw','c1', $$a2='1' or a3='1' or a4='1' or a5='1' or a6='1'$$,'3d18h');
+INSERT INTO wed_trig (cpred,cfinal) values ($$a1='1' or a7='1'$$, True);
+
+COMMIT;
+
+--select state->'a1' as a1,state->'a2' as a2,state->'a3' as a3,state->'a4' as a4,state->'a5' as a5,state->'a6' as a6,state->'a7' as a7 from wed_trace where wid=5;
+
