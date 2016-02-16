@@ -54,7 +54,7 @@ CREATE TABLE JOB_POOL (
 CREATE TABLE ST_STATUS (
     wid     INTEGER PRIMARY KEY,
     status  TEXT NOT NULL DEFAULT 'R',
-    FOREIGN KEY (wid) REFERENCES WED_flow (wid) ON DELETE RESTRICT
+    FOREIGN KEY (wid) REFERENCES WED_flow (wid) ON DELETE CASCADE
 );
 
 --*WED-trace keeps the execution history for all instances
@@ -65,5 +65,5 @@ CREATE TABLE WED_trace (
     status    TEXT NOT NULL DEFAULT 'R',
     tstmp      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     state      JSON NOT NULL,
-    FOREIGN KEY (wid) REFERENCES WED_flow (wid) ON DELETE RESTRICT
+    FOREIGN KEY (wid) REFERENCES WED_flow (wid) ON DELETE CASCADE
 );

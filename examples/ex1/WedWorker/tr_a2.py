@@ -5,7 +5,7 @@ class MyWorker(BaseClass):
     
     #trname and dbs variables are static in order to conform with the definition of wed_trans()    
     trname = 'tr_a2'
-    dbs = 'user=wed_admin dbname=sandbox application_name=ww-tr_a2'
+    dbs = 'user=ex1 dbname=ex1 application_name=ww-tr_a2'
     wakeup_interval = 5
     
     def __init__(self):
