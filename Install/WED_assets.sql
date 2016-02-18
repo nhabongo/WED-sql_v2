@@ -1,4 +1,4 @@
-SET ROLE wed_admin;
+--SET ROLE wed_admin;
 
 CREATE OR REPLACE FUNCTION trcheck () RETURNS bool AS 
 $$
@@ -24,4 +24,17 @@ $$
     
 $$ LANGUAGE plpython3u;
 
-RESET ROLE; 
+CREATE OR REPLACE FUNCTION trigger_toggle(tgid integer) RETURNS bool AS
+$$
+
+    try:
+        res = plpy.execute('update wed_trig set enabled = not enabled where tgid='+str(tgid)+' returning enabled')
+    except plpy.SPIError as e:
+        plpy.error(e)
+    
+    return res[0]['enabled']
+
+
+$$ LANGUAGE plpython3u;
+
+--RESET ROLE; 

@@ -45,6 +45,17 @@ $wah$
                 plpy.error('Could not modify columns at wed_flow')
             else:
                 plpy.info('Column default value updated in wed_flow')
+    
+    #-- An attribute column can only be dropped if there aren't any pending transactions for all wed-states and it is not
+    #--'referenced' by any predicate (cpred column in wed_trig table), otherwise an error should be raised.
+    #--elif TD['event'] == 'DELETE':
+    #--    try:
+    #--        plpy.execute('ALTER TABLE wed_flow DROP COLUMN '+ plpy.quote_ident(TD['old']['aname'])) 
+    #--    except plpy.SPIError:
+    #--        plpy.error('Could not remove column %s at wed_flow' %(TD['old'['aname']))
+    #--    else:
+    #--        plpy.info('Column %s removed from wed_flow' %(TD['old'['aname']))
+        
     else:
         plpy.error('UNDEFINED EVENT')
         return None
@@ -78,15 +89,15 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
         
         trmatched = []
         try:
-            res_wed_trig = plpy.execute('select * from wed_trig')
+            res_wed_trig = plpy.execute('select * from wed_trig where enabled')
         except plpy.SPIError:
             plpy.error('wed_trig scan error')
         else:
             for tr in res_wed_trig:
                 try:
                     res_wed_flow = plpy.execute('select * from wed_flow where wid='+str(TD['new']['wid'])+' and ('+tr['cpred']+')')
-                except plpy.SPIError:
-                    plpy.error('wed_flow scan error')
+                except plpy.SPIError as e:
+                    plpy.error('PREDICATE MATCH ERROR!: Invalid predicate (cpred) in WED_trig table')
                 else:
                     if res_wed_flow:
                         trmatched.append((tr['trname'],tr['tgid'],tr['timeout']))

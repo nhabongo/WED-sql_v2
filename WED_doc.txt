@@ -4,14 +4,10 @@ pg_locks
 
 --advisory locks
 table oid = select 'table name'::regclass::oid)::integer
-select pg_try_advisory_lock(<table oid>, <row_number>)
-select pg_advisory_unlock(<table oid>, <row_number>)
+select pg_try_advisory_xact_lock(wid, tgid) (transaction level)
 
 --kill transaction
-
---reset id for job pool
-number of rows vs currval('seq')
-setval('seq'::regclass, value)
+select pg_terminate_backend(pid)
 
 --condition match
 trigger on wed_trig (validate trname) (done)
@@ -21,12 +17,14 @@ remove CREATE, DROP, ALTER, GRANT, REVOKE, SELECT, INSERT, UPDATE, DELETE (done)
 --wed_attr
 force attr names to lowercase
 
---wed_flow
-block update on wid
-
 --optimizations
-cache imports on SD global dictionary
+cache imports on SD global dictionary (unfeasible)
 cache cpred
+implement trcheck() function to kill a timed out transaction in C (inside bg_worker)
+*remove a wed-attribute
+parse attribute names from column cpred in wed_trig (to exclude some invalid predicates and to remove an attr from wed_flow table)
+force an wed-state to go to an inconsistent wed-state (why ?)
+rematch all wed-states in wed_flow table (maybe after inserting new wed-attributes and or new wed-triggers)
 
 --lock mechanism
 begin;
