@@ -1,0 +1,13 @@
+--O que é ?
+--Como funciona ? (wed-server, wed-worker, bg_worker)
+
+  WED-SQL é uma implementação do modelo WED-flow que utiliza um sgbd relacional e a linguagem SQL para gerenciar transações,
+definir propriedades e controlar o fluxo de dados de transações de longa duração (Long-lived Transactions). Por utilizar
+como base tecnologias consolidadas e amplamente adotadas no universo da computação, a WED-SQL visa difundir a adoçao
+do paradigma WED-flow na modelagem de processos de negócio , além de criar uma ferramenta robusta, facilmente
+escalável, simples de ser utilizada e que permita flexibilidade na especificação de controle de fluxos.
+
+  
+
+ 
+    
