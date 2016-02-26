@@ -30,7 +30,9 @@ a utilização de uma linguagem de programação de alto nível, como Python, é
 modelo seja implementada de forma plena. Do ponto de vista de implementação, o WED-server contém código Python, SQL, C e 
 aproveita o arcabouço transacional clássico (propriedades ACID, controle de concorrência e etc) fornecido pelo Postgresql.
 
-  O WED-worker ...
+  Já o WED-worker tem a função de conectar-se ao WED-server para efetuar as WED-transitions. Cada WED-transition é associada
+a um ou mais WED-workers, dependendo da demanda de trabalho gerada pelo WED-server, e cada WED-worker é especializado
+em realizar uma WED-transition específica. A quantidade máxima de WED-workers
 
 
 

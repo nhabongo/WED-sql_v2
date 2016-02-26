@@ -46,7 +46,8 @@ then
     sudo -u postgres psql -q -c "DROP DATABASE $DB ;"
     exit 1
 else
-    sudo -u postgres psql -q -c "REVOKE ALL ON DATABASE $DB FROM public ;"
+    sudo -u postgres psql -q -c "REVOKE ALL ON DATABASE $DB FROM public;"
+    sudo -u postgres psql -q -c "REVOKE ALL ON SCHEMA public FROM public;"
     sudo -u postgres psql -q -c "GRANT CONNECT ON DATABASE $DB TO $USER ;"
 fi 
 
