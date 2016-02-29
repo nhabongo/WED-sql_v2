@@ -1,4 +1,9 @@
---O que é ?
+% O numero máximo de WED-workers que podem ser executados em paralelo, depende
+%da quantidade de conecções que o WED-server consegue manter ativas simultaneamente. Caso contrário, um WED-worker pode
+%esperar por uma conecção com o WED-server ou abortar a transação.
+
+
+%--O que é ?
 
   WED-SQL é uma implementação do modelo WED-flow que utiliza um sgbd relacional e a linguagem SQL para gerenciar,
 definir propriedades e controlar o fluxo de dados de transações longas (Long-lived Transactions). Por utilizar
@@ -6,8 +11,8 @@ como base tecnologias consolidadas e amplamente adotadas no universo da computa�
 do paradigma WED-flow na modelagem de processos de negócio , além de criar uma ferramenta robusta, facilmente
 escalável, simples de ser utilizada e que permita flexibilidade na especificação de controle de fluxos.
 
---Como funciona ? (wed-server, wed-worker, bg_worker)
-#webservice, fault tolerance, keep alive transaction, exception management
+%--Como funciona ? (wed-server, wed-worker, bg_worker)
+%webservice, fault tolerance, keep alive transaction, exception management
 
   Com o objetivo de  ser utilizada em um ambiente distribuido, mais especificamente por meio de web-services, e também
 devido à natureza das transações longas, a WED-SQL foi construida utilizando a arquitetura cliente-servidor. A componente
@@ -15,8 +20,8 @@ servidor, ou WED-server, é responsável por fazer o controle de fluxo de dados 
 para um determinado WED-flow, disparando as WED-triggers conforme necessário. Já a componente cliente, ou WED-worker (
 quem sabe até WED-service), é quem efetivamente realiza as WED-transitions.
 
-#postgresl catalog driven, mvcc, extensions
-#aproveitar arcabouço transacional, linguagem alto nivel
+%postgresl catalog driven, mvcc, extensions
+%aproveitar arcabouço transacional, linguagem alto nivel
   O WED-server é, basicamente, uma extensão para o sgbd Postgresql composta de triggers, tabelas de controle e "stored
 procedures". A escolha do Postgresql como base do WED-server se deu por diversos motivos, tais quais, ser de código aberto, 
 implemetação modular baseada em catálogs (system catalog driven), facilidade de extender suas funcionalidades por meio de
@@ -32,7 +37,27 @@ aproveita o arcabouço transacional clássico (propriedades ACID, controle de co
 
   Já o WED-worker tem a função de conectar-se ao WED-server para efetuar as WED-transitions. Cada WED-transition é associada
 a um ou mais WED-workers, dependendo da demanda de trabalho gerada pelo WED-server, e cada WED-worker é especializado
-em realizar uma WED-transition específica. A quantidade máxima de WED-workers
+em realizar uma WED-transition específica. A quantidade máxima de WED-workers trabalhando simultaneamente é limitada
+apenas pela quantidade de transações que um dado WED-server é capaz de executar paralelamente.
+  
+  %diagrama ER
+  ---
+  %ESTRUTURA (semantica da aplicacao, workflow)
+  Embora seja possível definir multiplos WED-flows em uma única base de dados, definidos por subconjuntos de atributos (atributos de interesse de um dado WED-flow), condicoes e transicoes, o WED-server permite cada WED-flow esteja localizado em uma base de dados distinta, de acordo com
+com um determinado significado semântico. 
+ 
+  %Definir novo WED-flow (1 por db, atributos de interesse)
+  Para se criar um novo WED-flow é preciso definir um conjunto de WED-atributes e um conjunto de WED-triggers associando
+WED-transitions à WED-conditions. Essa definição, por ora, é expressa em SQL (futuramente em WSQL)
+  
+  
+%ALGORITMO (trava update, uma instancia por linha, )
+
+%DETALHES DE FUNCIONAMENTO (balanço: coneccoes x demanda)
+
+%escalabilidade (horizontal, vertical, consistencia transacional, pg_shard)
+ 
+%TRABALHOS FUTUROS (linguagem, gerenciador de conecções)
 
 
 
