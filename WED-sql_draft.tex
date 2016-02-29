@@ -38,13 +38,40 @@ aproveita o arcabouço transacional clássico (propriedades ACID, controle de co
   Já o WED-worker tem a função de conectar-se ao WED-server para efetuar as WED-transitions. Cada WED-transition é associada
 a um ou mais WED-workers, dependendo da demanda de trabalho gerada pelo WED-server, e cada WED-worker é especializado
 em realizar uma WED-transition específica. A quantidade máxima de WED-workers trabalhando simultaneamente é limitada
-apenas pela quantidade de transações que um dado WED-server é capaz de executar paralelamente.
+apenas pela quantidade de conecções que um dado WED-server é capaz de manter abertas.
   
-  %diagrama ER
-  ---
   %ESTRUTURA (semantica da aplicacao, workflow)
-  Embora seja possível definir multiplos WED-flows em uma única base de dados, definidos por subconjuntos de atributos (atributos de interesse de um dado WED-flow), condicoes e transicoes, o WED-server permite cada WED-flow esteja localizado em uma base de dados distinta, de acordo com
-com um determinado significado semântico. 
+  Um WED-flow é um conjunto de WED-triggers, que associam WED-conditions e WED-transitions, definidas em cima de 
+um subconjunto de WED-attributes.
+  Embora seja possível definir multiplos WED-flows em uma única base de dados, o WED-server permite que cada um deles 
+esteja localizado em uma base de dados distinta, de acordo com um determinado significado semântico. Com isso também é 
+possível isolar atributos que não devem ser compartilhados entre diferentes WED-flows. 
+  
+  %ER
+  O seguinte diagrama ER representa a estrutura de dados implementada como uma base de dados no WED-server:
+  ---picture---
+
+  %tabelas(wed_flow,wed_attr,wed_trig,wed_trace,job_pool)
+  Os WED-attributes são definidos na tabela wed_attr por um nome e, opcionalmente, por um valor padrão representados 
+pelas colunas "aname" e "adv" respectivamente. Cada WED-attribute é identificado univocamente por seu nome que também é 
+a chave primária da tabela. Ao criar-se um novo WED-attribute, ou seja, ao inserir-se uma nova linha na tabela wed_attr, 
+uma coluna de mesmo nome será automaticamente criada na tabela wed_flow.
+  A tabela wed_trig contém as WED-triggers, ou seja, cada linha representa a associação de uma WED-condition com uma 
+WED-transition. Possui os seguintes atributos:
+
+  - tgid: identificador único de uma WED-trigger;
+  - tgname: atributo opcional que pode ser utilizado para dar um nome à WED-trigger;
+  - enabled: permite que a WED-trigger seja desativada;
+  - trname: identificador único da WED-transition associada.
+  - cname: atributo opcional que pode ser utilizado para dar um nome à WED-condition associada;
+  - cpred: predicado da WED-condition associada. Aceita qualquer predicado valido na claúsula WHERE em SQL;
+  - cfinal: utilizada para indicar qual é a condição final. Embora apenas uma WED-condition possa ser marcada como final,
+           o operado lógico OU pode ser utilizado em seu predicado para definir-se multiplos WED-states finais.
+  - timeout: tempo limite para que um WED-worker finalize a WED-transition representada por "trname".
+
+      
+  
+
  
   %Definir novo WED-flow (1 por db, atributos de interesse)
   Para se criar um novo WED-flow é preciso definir um conjunto de WED-atributes e um conjunto de WED-triggers associando
@@ -53,11 +80,11 @@ WED-transitions à WED-conditions. Essa definição, por ora, é expressa em SQL
   
 %ALGORITMO (trava update, uma instancia por linha, )
 
-%DETALHES DE FUNCIONAMENTO (balanço: coneccoes x demanda)
+%DETALHES DE FUNCIONAMENTO (balanço: coneccoes x demanda,payload pode nao ser o estado atual)
 
 %escalabilidade (horizontal, vertical, consistencia transacional, pg_shard)
  
-%TRABALHOS FUTUROS (linguagem, gerenciador de conecções)
+%TRABALHOS FUTUROS (linguagem, gerenciador de conecções, remocao de attr)
 
 
 
