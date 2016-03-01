@@ -37,3 +37,6 @@ it is possible to go from one inconsistent state to another inconsistent state
 
 --problems
 max number of simultaneous connections (100, lots of ram)
+
+--TODO
+create SP to retrive the state of an instance given its wid (ST_STATUS table)

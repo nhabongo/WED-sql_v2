@@ -41,8 +41,8 @@ em realizar uma WED-transition específica. A quantidade máxima de WED-workers 
 apenas pela quantidade de conecções que um dado WED-server é capaz de manter abertas.
   
   %ESTRUTURA (semantica da aplicacao, workflow)
-  Um WED-flow é um conjunto de WED-triggers, que associam WED-conditions e WED-transitions, definidas em cima de 
-um subconjunto de WED-attributes.
+  Um WED-flow é um conjunto de WED-triggers, que associam WED-conditions, definidas em cima de 
+um subconjunto de WED-attributes, e WED-transitions.
   Embora seja possível definir multiplos WED-flows em uma única base de dados, o WED-server permite que cada um deles 
 esteja localizado em uma base de dados distinta, de acordo com um determinado significado semântico. Com isso também é 
 possível isolar atributos que não devem ser compartilhados entre diferentes WED-flows. 
@@ -69,7 +69,35 @@ WED-transition. Possui os seguintes atributos:
            o operado lógico OU pode ser utilizado em seu predicado para definir-se multiplos WED-states finais.
   - timeout: tempo limite para que um WED-worker finalize a WED-transition representada por "trname".
 
-      
+  O histórico de execução das WED-transition fica armazenado na tabela wed_trace, composta dos seguintes atributos:
+  
+  - wid: referência ao identificador da instancia do WED-flow;
+  - state: WED-state, em formato json, que disparou as WED-transitions listadas em "trf";
+  - trf: lista de WED-transitions disparadas pelo WED-state em "state";
+  - trw: WED-transition que gravou o WED-state representado por "state". Um valor nulo indica o WED-state inicial;
+  - status: Indica qual o estado do WED-state em "state". Os possíveis valores são "F","E" ou "R" que indicam que o WED-state
+           é final, excessão ou regular, respectivamente.
+  - tstmp: indica o momento em que ocorreu o registro. Pode se recuperar a história de execução de uma instância ordenando-se
+          as entradas nessa tabela por essa coluna.
+  
+  A tabela job_pool contém entradas referentes as WED-transitions pendentes que precisam ser executadas pelos WED-workers.
+Suas colunas são:
+  
+  - wid: referência ao identificador da instancia do WED-flow;
+  - tgid: referência a WED-trigger que disparou a WED-transition "trname";
+  - trname: nome da WED-transition a ser executada;
+  - lckid: parâmetro opcional que pode ser utilizado pelos WED-workers para se identificarem. Futuramente, pode ser utilizado
+          para fins de autenticação e validação dos WED-workers;
+  - timeout: tempo limite para a execução da WED-transition (tempo limite da transação). É uma cópia da coluna de mesmo
+            nome da tabela wed_trig;
+  - payload: WED-state, em formato json, que disparou a referida WED-transition. Pode ser utilizado, por exemplo, por
+            WED-workers que executam WED-transitions associadas a WED-conditions que possuem o operador lógico "OR" em 
+            seu predicado.
+  
+  Finalmente, a tabela wed_flow é o ponto de entrada para inicializar-se uma nova instância. Essa tabela é criada dinâmicamente
+de acordo com os WED-attributes definidos na tabela wed_attr. Cada entrada em wed_attr corresponde a uma coluna em wed_flow.
+Suas entradas são o WED-state atual de cada instância, ou seja, são tuplas formadas por um identificador, representado
+na coluna "wid", e os WED-attributes. 
   
 
  

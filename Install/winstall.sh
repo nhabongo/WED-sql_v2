@@ -64,7 +64,6 @@ echo -e "Setting WED-user permissions on database $DB ..."
 
 echo -e "GRANT USAGE ON SCHEMA public TO $USER;
          GRANT SELECT ON job_pool to $USER;
-         GRANT SELECT ON st_status to $USER;
          GRANT SELECT ON wed_trace to $USER;
          GRANT SELECT,INSERT,UPDATE ON wed_attr to $USER;
          GRANT SELECT,INSERT,UPDATE ON wed_trig to $USER;
