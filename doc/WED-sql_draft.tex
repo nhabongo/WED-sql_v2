@@ -48,10 +48,19 @@ esteja localizado em uma base de dados distinta, de acordo com um determinado si
 possível isolar atributos que não devem ser compartilhados entre diferentes WED-flows. 
   
   %ER
-  O seguinte diagrama ER representa a estrutura de dados implementada como uma base de dados no WED-server:
+  O diagrama ER na figura abaixo representa o modelo de dados gerenciado internamente pelo WED-server. Vale notar que, devido
+a flexibilidade de modificaçao da estrutura de dados utilizada para representar os WED-states, não é possível capturar todos
+os aspectos do paradigma WED-flow representando-o por meio de um diagrama Entidade-Relacionamento clássico. Por exemplo,
+o relacionamento entre as entidades WED_attr e WED_flow é gerenciado pelo WED-server, ou seja, não há chaves indicando
+a relação entre essas duas entidades. A principal razão disso é pertimir adicionar ou remover WED-attributes em tempo de execução, 
+o que demanda modificações na estrutura de dados que, por sua vez, podem ser efetuadas de maneira ininterrupta.
+  Do relacionamento entre as entidades WED_flow e WED_trig resultam a entidade fraca Job_Pool, que contém as WED-transitions
+a serem executadas, e a entidade fraca WED_trace, quem contém os registros de execução de cada instância dos WED-flows.
   ---picture---
-
+  
   %tabelas(wed_flow,wed_attr,wed_trig,wed_trace,job_pool)
+  O WED-server utiliza cinco tabelas para definir regras, propriedades e controlar o fluxo de execução dos WED-flows: WED_attr,
+WED_flow, WED_trace, WED_trig e Job_pool.
   Os WED-attributes são definidos na tabela wed_attr por um nome e, opcionalmente, por um valor padrão representados 
 pelas colunas "aname" e "adv" respectivamente. Cada WED-attribute é identificado univocamente por seu nome que também é 
 a chave primária da tabela. Ao criar-se um novo WED-attribute, ou seja, ao inserir-se uma nova linha na tabela wed_attr, 
