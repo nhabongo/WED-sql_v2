@@ -109,15 +109,53 @@ Suas entradas são o WED-state atual de cada instância, ou seja, são tuplas fo
 na coluna "wid", e os WED-attributes. 
   
 
- 
+  %FUNCIONAMENTO
   %Definir novo WED-flow (1 por db, atributos de interesse)
   Para se criar um novo WED-flow é preciso definir um conjunto de WED-atributes e um conjunto de WED-triggers associando
-WED-transitions à WED-conditions. Essa definição, por ora, é expressa em SQL (futuramente em WSQL)
+WED-transitions à WED-conditions. Essa definição, por ora, é expressa em SQL (futuramente em WSQL). Veja um exemplo na
+figura <ex1.wsql>
+  Note que os valores dos predicados para as WED-conditions, representados por meio da coluna "cpred", tem a mesma sintaxe
+utilizada para expressar as restrições de uma cláusula WHERE em SQL. De fato, a expressão em "cpred" será utilizada as-is
+pelo WED-server para disparar as WED-transitions. Ao utilizar-se duplo \$ para delimitar essa expressão, elimina-se a necessidade
+de "escapar" as aspas simples ou outros caracteres especiais.
+  Note também que a condição final de um WED-flow é declarada nessa mesma tabela WED_trig, embora de modo simplificado.
+São necessários apenas o predicado em "cpred" e o valor Verdade em "cfinal". Caso não haja uma condição final na tabela
+WED_trig, todas as instâncias desse WED-flow terminarao em um WED-state de excessão.
+  É recomendado encapsular a definição de um WED-flow em uma única transação, uma vez que, no caso de um erro de sintaxe
+na definição de uma WED-trigger, por exemplo, seria necessário remover manualmente do WED-server as definições executadas
+até o momento do erro. 
   
+  %Definir WED-workers
+  Como mencionado anteriormente, quem executa as WED-transitions disparadas pelo WED-server são os WED-workers. Sendo assim,
+é necessário criar esses WED-workers e associá-los as respectivas WED-transitions. É recomendado ter ao menos um WED-worker
+associado a cada WED-transition.
+  Um WED-worker é uma aplicação cliente do WED-server e, por esse motivo, pode ser escrito em qualquer linguagem de progra-
+mação que tenha suporte para conectar-se ao sgbd PostgreSQL e que implemente o protocolo de comunicação do WED-server (veja
+o capitulo xx). 
+  No escopo deste trabalho os WED-workers são escritos em python utilizando-se o pacote BaseWorker, que acompanha o WED-SQL.
+A figura abaixo ilustra a definição de um novo WED-worker:
+
+  O primeiro passo é importar a classe abstrata BaseClass do pacote BaseWorker. Essa classe implementa a lógica do protocolo
+de comunicação com o WED-server e também gerencia as conecções com o mesmo. 
+  O proximo passo é de fato criar o WED-worker, definindo uma nova classe concreta que implemente o método wed_trans() e
+defina os seguintes atributos:
+  - trname: nome da WED-transition que será executada por esse WED-worker. Precisa ser o mesmo utilizado na definicão
+           do WED-flow;
+  - dbs: parametros da conecção com o WED-server no formato aceito pelo driver psycopg2. No mínimo devem ser especificados
+        o usuário, o nome da base de dados onde o WED-flow foi carregado e o nome do WED-worker por meio do campo "application_name";
+  - wakeup_interval: é o intervalo de tempo no qual o WED-worker fica suspenso esperando por uma notificação do WED-server (veja capitulo xx);
   
+  Esses atributos são utilizados para inicializar a BaseClass.
+  O método wed_trans() recebe como parametro o WED-state da instÂncia do WED-flow que disparou a transação, e retorna uma 
+string com os novos valores dos WED-attributes dessa mesma instância. A sintaxe utilizada para esse valor de retorno deve
+ser a mesma utilizada em uma cláusula SET de uma cláusula UPDATE em SQL. O valor "None" pode ser retornado para abortar
+a transação.
+  Essa classe concreta que implementa o WED-worker deve então ser instanciada e executada invocando-se o método run().
+
 %ALGORITMO (trava update, uma instancia por linha, )
 
-%DETALHES DE FUNCIONAMENTO (balanço: coneccoes x demanda,payload pode nao ser o estado atual)
+  Uma vez que o novo WED-flow foi definido e carregado no WED-server
+%DETALHES DE FUNCIONAMENTO (protocolo de comunicaocao, balanço: coneccoes x demanda,payload pode nao ser o estado atual)
 
 %escalabilidade (horizontal, vertical, consistencia transacional, pg_shard)
  
