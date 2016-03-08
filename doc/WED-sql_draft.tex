@@ -150,16 +150,49 @@ defina os seguintes atributos:
 string com os novos valores dos WED-attributes dessa mesma instância. A sintaxe utilizada para esse valor de retorno deve
 ser a mesma utilizada em uma cláusula SET de uma cláusula UPDATE em SQL. O valor "None" pode ser retornado para abortar
 a transação.
-  Essa classe concreta que implementa o WED-worker deve então ser instanciada e executada invocando-se o método run().
+  Essa classe concreta que implementa o WED-worker deve então ser instanciada e executada, invocando-se o método run().
 
-%ALGORITMO (trava update, uma instancia por linha, )
+%ALGORITMOS (trava update, uma instancia por linha, )
 
-  Uma vez que o novo WED-flow foi definido e carregado no WED-server
-%DETALHES DE FUNCIONAMENTO (protocolo de comunicaocao, balanço: coneccoes x demanda,payload pode nao ser o estado atual)
+  Após definir-se e carregar-se um WED-flow em uma base de dados do WED-server e inicializar-se seus respectivos WED-workers, uma
+nova instância é inicializada inserindo-se um WED-state na tabela WED_flow. Essa nova instância receberá um identificador
+único que será utilizado tanto para o registro de sua história de execução, na tabela WED_trace, quanto para o controle
+transacional das WED-transitions. Se os valores padrao definidos para os WED-attributes, por meio da coluna "adv", na 
+tabela WED_attr forem os valores de um WED-state inicial, basta executar o comando abaixo para se inicializar uma nova
+instância:
+  INSERT INTO wed_flow DEFAULT VALUES;
+  Para cada nova instância é inserida na tabela wed_flow, o WED-server irá comparar os predicados das WED-conditions definidos
+na tabela wed_trig com o WED-state representado na nova instância. Para cada condição satisfeita a respectiva WED-transition
+será disparada na forma de uma entrada na tabela job_pool e uma notificação será enviada ao WED-worker responsavel
+por executá-la. Além disso, serão adicionadas entradas na tabela wed_trace registrando os eventos ocorridos. O WED-server
+ficará então aguardando até que uma nova instância ou uma WED-transition seja iniciada. Vale notar que WED-states iniciais 
+que não sejam finais e que não disparem ao menos uma WED-transition serão rejeitados pelo WED-server.
+  Na sequencia, os WED-workers podem atuar de dois modos distintos: imediatamente ao receber uma notificação do WED-server, ou quando o limite
+de tempo de espera por notificações termina (atributo wakeup_interval) e, nesse caso, é preciso consultar a tabela job_pool em
+busca de WED-transitions pendentes. Independentemente do modo de atuação e antes de inicializar a transação, cada WED-worker 
+precisa solicitar ao WED-server uma trava (advisory_lock) na WED-transition e em qual instância do WED-flow será executada a transação. 
+Essa trava é necessária tanto para avisar a outros WED-workers que estejam trabalhando na mesma WED-transition que não a 
+executem para a mesma instância, quanto para que o WED-server possa controlar o tempo limite da execução de cada WED-transition. 
+Não é possivel executar uma WED-transition sem que o respectivo WED-worker consiga obter essa trava previamente.
+  De posse da referida trava, um WED-worker terá que finalizar a transação dentro do tempo limite de execução da WED-transition.
+Essa transação é finalizada atualizando-se o WED-state atual da instância em que está sendo executada a WED-transition por meio
+de um UPDATE na tabela wed_flow.
+  Quando uma instância é atualizada, o WED-server novamente irá verificar se esse novo WED-state dispara novas WED-transitions
+e, em caso afirmativo, registrá-las na tabela job_pool, além que registrar os novos eventos em wed_trace. Caso esse novo WED-state
+satifaça a condição final e não haja nenhuma WED-transition pendente, essa instancia é marcada como finalizada e não poderá ser
+modificada, a menos que sejam inseridos novos WED-attributes ou que sejam modificadas ou adicionadas novas WED-triggers. Em
+caso de não houver WED-transitions pendentes e esse WED-state não for final, a instância será marcada como excessão e uma
+entrada especial será adicionada a tabela job_pool.
+
+%algoritmo do wed-server
+%algoritmo do wed-worker
+%ilustração
+  
+%DETALHES DE FUNCIONAMENTO (excessoes, tras simultaneas,continuous query,protocolo de comunicaocao, balanço: coneccoes x demanda,payload pode nao ser o estado atual)
 
 %escalabilidade (horizontal, vertical, consistencia transacional, pg_shard)
  
-%TRABALHOS FUTUROS (linguagem, gerenciador de conecções, remocao de attr)
+%TRABALHOS FUTUROS (linguagem, gerenciador de conecções, remocao de attr, forcar wed-state inicial)
 
 
 

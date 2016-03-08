@@ -40,3 +40,4 @@ max number of simultaneous connections (100, lots of ram)
 
 --TODO
 create SP to retrive the state of an instance given its wid (ST_STATUS table)
+re-run match algorithm in case of modifications on tables WED_attr or WED_trig
