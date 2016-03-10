@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015/Arch Linux) (preloaded format=pdflatex 2015.11.17)  9 MAR 2016 21:29
+This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015/Arch Linux) (preloaded format=pdflatex 2015.11.17)  10 MAR 2016 10:48
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -528,33 +528,28 @@ G,.JBIG2,.JB2,.eps]
 File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
 e
 ))
-LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <9> on input line 432.
-LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <6> on input line 432.
-LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <5> on input line 432.
-LaTeX Font Info:    Font shape `T1/ptm/bx/it' in size <6> not available
-(Font)              Font shape `T1/ptm/b/it' tried instead on input line 432.
+
+Package blindtext Warning: brazilian not defined, using English instead.
+(blindtext)                 on input line 462.
 
 
 Package blindtext Warning: brazilian not defined, using English instead.
-(blindtext)                 on input line 458.
+(blindtext)                 on input line 552.
 
 
 Package blindtext Warning: brazilian not defined, using English instead.
-(blindtext)                 on input line 548.
-
-
-Package blindtext Warning: brazilian not defined, using English instead.
-(blindtext)                 on input line 571.
+(blindtext)                 on input line 575.
 
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <8> on input line 612.
-** WARNING: \IEEEbiography is locked out when in conference mode (line 628).
+(Font)              <8> on input line 616.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <6> on input line 616.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <5> on input line 616.
+** WARNING: \IEEEbiography is locked out when in conference mode (line 632).
 
 Package blindtext Warning: brazilian not defined, using English instead.
-(blindtext)                 on input line 630.
+(blindtext)                 on input line 634.
 
 
 ** Conference Paper **
@@ -572,18 +567,18 @@ Before submitting the final camera ready copy, remember to:
 
 ] (./main.aux) ) 
 Here is how much of TeX's memory you used:
- 3308 strings out of 493054
- 47203 string characters out of 6140585
- 119420 words of memory out of 5000000
- 6778 multiletter control sequences out of 15000+600000
- 113226 words of font info for 116 fonts, out of 8000000 for 9000
+ 3298 strings out of 493054
+ 47100 string characters out of 6140585
+ 118420 words of memory out of 5000000
+ 6772 multiletter control sequences out of 15000+600000
+ 109546 words of font info for 111 fonts, out of 8000000 for 9000
  1144 hyphenation exceptions out of 8191
  38i,6n,23p,230b,217s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/share/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/share/
 texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/share/texmf-dist/fonts/type1/
 urw/times/utmbi8a.pfb></usr/share/texmf-dist/fonts/type1/urw/times/utmr8a.pfb><
 /usr/share/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on main.pdf (1 page, 55531 bytes).
+Output written on main.pdf (1 page, 56919 bytes).
 PDF statistics:
  25 PDF objects out of 1000 (max. 8388607)
  17 compressed objects within 1 object stream

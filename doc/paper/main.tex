@@ -413,12 +413,16 @@ calton@cc.gatech.edu}}
 \begin{abstract}
 %\boldmath
 %\blindtext[1]
-Utilizar o paradigma WED-flow simplifica o desenvolvimento de aplicações que implementam modelos de processo de negócio.
-Tais aplicações precisam dispor de mecanismos para lidar com exceções nao previstas na fase de modelagem e da flexibilidade
-para incorporar novas regras de negócio. Por meio de uma história de execução baseada em estados de dados, a abordagem
-WED-flow é capaz de oferecer mecanismos que possibilitam o tratamento de execeções em tempo real com suporte a recuperação
-baseada em modelos transacionais. A WED-SQL é uma implementação do arcabouço WED-flow que utiliza o modelo de dados relacional e um SGBD
-para o controle de transações longas. 
+Desenvolver e implementar um modelo de processo de negócios utilizando os conceitos do WED-flow resulta em um sistema de
+informação dinâmico, simplificando o desenvolvimento incremental e adaptativo, além de reduzir significativamente a
+complexidade no tratamento de exceções quando comparado aos arcabouços tradicionais (BPEL, álgebra de processos, Redes
+de Petri e etc). No entanto, uma aplicação baseada no WED-flow precisa implementar uma camada de software em um nível
+abaixo para fazer o controle transacional baseado em estados de dados (WED-states), assim como fornecer suporte ao tratamento
+de exceções ou utilizar uma ferramenta com a WED-tool gerenciar esses mecanismos. A proposta da WED-SQL é fornecer um
+arcabouço WED-flow distribuído e de alto desempenho para simplificar tanto o desenvolvimento quanto a implementação de tais
+aplicações. Algumas vantagens da WED-SQL é que seu mecanismo de controle está dentro de um SGBD relacional e, com isso,
+utiliza a linguagem SQL para a especificação das definições do WED-flow (WED-triggers, WED-transitions, WED-conditions, etc). 
+
 \end{abstract}
 % IEEEtran.cls defaults to using nonbold math in the Abstract.
 % This preserves the distinction between vectors and scalars. However,
@@ -429,7 +433,7 @@ para o controle de transações longas.
 
 % Note that keywords are not normally used for peerreview papers.
 \begin{IEEEkeywords}
-WED-flow, \LaTeX, PostgreSQL.
+WED-flow, PostgreSQL, transações longas, ...
 \end{IEEEkeywords}
 
 
