@@ -463,7 +463,7 @@ de petri, procuram capturar interações, relações e o comportamento entre pro
 dos dados no projeto. Nenhuma dessas ferramentas, no entanto, é exatamente adequada para modelar processos que necessitam
 ser modificados frequentemente, o que implica em aumento exponencial no custo e na complexidade do projeto.
 \\
-\indent  O modelo WED-flow\cite{FTPM10,ICWS12}, como uma alternativa aos modelos clássicos, captura não só a dinâmica da interação entre processos
+\indent  O modelo WED-flow\cite{FTPM10}, como uma alternativa aos modelos clássicos, captura não só a dinâmica da interação entre processos
 como também, com igual importância, os dados gerados assim como os eventos que implicam em alterações desses dados.
 Com isso, o WED-flow é capaz de construir um workflow de estados de dados com suas respectivas condições de transição 
 entre os mesmos. E assim, agregando propriedades de recuperação transacional a esse workflow, prover mecanismos para o 
@@ -474,13 +474,26 @@ estados de dados e novas regras, ou novos processos, se traduzem em condições 
 dados. Essa versatilidade permite capturar a natureza de processos verdadeiramente dinâmicos, simplificando a evolução 
 incremental tanto do modelo de negócio quanto do software que o implementa.
 \\
-\indent Para que um modelo de processo de negócio baseado no WED-flow seja implementado em software, é preciso também
-implementar as definições do WED-flow, que são a base para o tratamento de exceções e para o controle transacional.  
 %problemas da implementacao e justificativa do WED-SQL
+%tolerancia a falhas
+\indent Para que um modelo de processo de negócio baseado no WED-flow seja implementado em software, é preciso também
+implementar as definições do WED-flow\cite{ICWS12}, que são a base para o tratamento de exceções e para o controle transacional.  
+Ao invés de incorporar essas definições a cada software que implemente um modelo WED-flow, uma maneira mais eficiente de o fazer
+é construir um arcabouço para padronizar a implementação do WED-flow em software. Nesse contexto, esse trabalho apresenta
+o arcabouço WED-SQL.
+\\
+\indent O WED-SQL foi construido dentro de um SGBD relacional e com isso utiliza a linguagem SQL para definir propriedades
+e controles de fluxo de um modelo WED-flow, além de contar com um robusto aparato transacional e ser altamente tolerante
+a falhas. Por utilizar como base tecnologias consolidadas e amplamente difundidas no universo da computação, a WED-SQL visa 
+disseminar a adoçao do paradigma WED-flow na modelagem de processos de negócio , fornecendo uma ferramenta confiável, facilmente
+escalável, simples de ser utilizada e que permita a flexibilidade exigida na especificação de controle de fluxo dos processos
+de negócio modernos.
+\\
+\indent O restante desse artigo segue a seguinte estrutura: ...
   
 
-\subsection{Subsection Heading Here}
-\blindtext
+\subsection{WED-SQL: arquitetura}
+%\blindtext
 
 % needed in second column of first page if using \IEEEpubid
 %\IEEEpubidadjcol
