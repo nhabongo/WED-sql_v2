@@ -458,22 +458,24 @@ modificaçoes estruturais, ocasionadas tanto por execessões não previstas na f
 requisitos. Ao longo do tempo, essas modificaçoes tendem a deteriorar a qualidade do código de tais sistemas, aumentando 
 exponencialmente seu custo de manutenção além de, eventualmente, comprometer seu desempenho.
 \\
-  Os modelos clássicos para especificação de processos de negócios, dentre eles o WS-BPEL, algebra de processos e redes
+\indent  Os modelos clássicos para especificação de processos de negócios, dentre eles o WS-BPEL, algebra de processos e redes
 de petri, procuram capturar interações, relações e o comportamento entre processos, muitas vezes negligenciando a importância
 dos dados no projeto. Nenhuma dessas ferramentas, no entanto, é exatamente adequada para modelar processos que necessitam
 ser modificados frequentemente, o que implica em aumento exponencial no custo e na complexidade do projeto.
 \\
-  O modelo WED-flow, como uma alternativa aos modelos clássicos, captura não só a dinâmica da interação entre processos
+\indent  O modelo WED-flow\cite{FTPM10,ICWS12}, como uma alternativa aos modelos clássicos, captura não só a dinâmica da interação entre processos
 como também, com igual importância, os dados gerados assim como os eventos que implicam em alterações desses dados.
 Com isso, o WED-flow é capaz de construir um workflow de estados de dados com suas respectivas condições de transição 
 entre os mesmos. E assim, agregando propriedades de recuperação transacional a esse workflow, prover mecanismos para o 
 tratamento de exceções em tempo real.
 \\
-  Ao utilizar a abordagem WED-flow para modelar um processo de negócio, modificações nos processos são traduzidas em novos
+\indent  Ao utilizar a abordagem WED-flow para modelar um processo de negócio, modificações nos processos são traduzidas em novos
 estados de dados e novas regras, ou novos processos, se traduzem em condições para se atingir um determinado estado de 
 dados. Essa versatilidade permite capturar a natureza de processos verdadeiramente dinâmicos, simplificando a evolução 
 incremental tanto do modelo de negócio quanto do software que o implementa.
-
+\\
+\indent Para que um modelo de processo de negócio baseado no WED-flow seja implementado em software, é preciso também
+implementar as definições do WED-flow, que são a base para o tratamento de exceções e para o controle transacional.  
 %problemas da implementacao e justificativa do WED-SQL
   
 
@@ -632,9 +634,22 @@ The authors would like to thank...
 % (used to reserve space for the reference number labels box)
 \begin{thebibliography}{1}
 
-\bibitem{IEEEhowto:kopka}
-H.~Kopka and P.~W. Daly, \emph{A Guide to \LaTeX}, 3rd~ed.\hskip 1em plus
-  0.5em minus 0.4em\relax Harlow, England: Addison-Wesley, 1999.
+\bibitem{FTPM10}
+João E. Ferreira, Osvaldo K. Takai, Simon Malkowski e Calton Pu. 
+\emph{Reducing exception handling complexity in business process modeling and implementation:
+the WED-flow approach.}, Em Proceedings of the 2010 international conference on
+On the move to meaningful internet systems - Volume Part I, OTM’10, páginas
+150–167. Springer-Verlag, 2010.
+
+\bibitem{ICWS12}
+João Eduardo Ferreira, Kelly Rosa Braghetto, Osvaldo Kotaro Takai e
+Calton Pu.\emph{ Transactional recovery support for robust exception handling in business process
+services.} Em Proceedings of the 19th International Conference on Web Services (ICWS), páginas
+303–310, 2012
+
+%\bibitem{IEEEhowto:kopka}
+%H.~Kopka and P.~W. Daly, \emph{A Guide to \LaTeX}, 3rd~ed.\hskip 1em plus
+%  0.5em minus 0.4em\relax Harlow, England: Addison-Wesley, 1999.
 
 \end{thebibliography}
 
