@@ -418,7 +418,7 @@ informação dinâmico, simplificando o desenvolvimento incremental e adaptativo
 complexidade no tratamento de exceções quando comparado aos arcabouços tradicionais (BPEL, álgebra de processos, Redes
 de Petri e etc). No entanto, uma aplicação baseada no WED-flow precisa implementar uma camada de software em um nível
 abaixo para fazer o controle transacional baseado em estados de dados (WED-states), assim como fornecer suporte ao tratamento
-de exceções ou utilizar uma ferramenta com a WED-tool gerenciar esses mecanismos. A proposta da WED-SQL é fornecer um
+de exceções ou utilizar uma ferramenta como a WED-tool gerenciar esses mecanismos. A proposta da WED-SQL é fornecer um
 arcabouço WED-flow distribuído e de alto desempenho para simplificar tanto o desenvolvimento quanto a implementação de tais
 aplicações. Algumas vantagens da WED-SQL é que seu mecanismo de controle está integrado a um SGBD relacional e, com isso,
 utiliza a linguagem SQL para a especificação das definições do WED-flow (WED-triggers, WED-transitions, WED-conditions, etc). 
@@ -451,29 +451,30 @@ WED-flow, PostgreSQL, transações longas, ...
 % creates the second title. It will be ignored for other modes.
 \IEEEpeerreviewmaketitle
 
-
-%evolucao incremental
-%clareza de dados
-%tratamento de exceção
-%versatilidade
 \section{Introducão}
-  Embora a abordagem WED-flow 
-  Além do mais, a clareza dos estados de dados, representados pelos WED-states, simplifica a detecção e o tratamento
-de exceções
-  Modelar um processo de negócio utilizando a abordagem WED-flow g
-  Criar uma aplicação que implemente um processo de negócio sob a abordagem WED-flow
-  WED-SQL é um framework transacional que implementa as definições e conceitos da abordagem WED-flow para a modelagem e
-implementação de processos de negócio.  
 
+  Sistemas computacionais contemporaneos para o gerenciamento de processos de negócio estão sujeitos a constantes 
+modificaçoes estruturais, ocasionadas tanto por execessões não previstas na fase de modelagem quanto para atender a novos 
+requisitos. Ao longo do tempo, essas modificaçoes tendem a deteriorar a qualidade do código de tais sistemas, aumentando 
+exponencialmente seu custo de manutenção além de, eventualmente, comprometer seu desempenho.
+\\
+  Os modelos clássicos para especificação de processos de negócios, dentre eles o WS-BPEL, algebra de processos e redes
+de petri, procuram capturar interações, relações e o comportamento entre processos, muitas vezes negligenciando a importância
+dos dados no projeto. Nenhuma dessas ferramentas, no entanto, é exatamente adequada para modelar processos que necessitam
+ser modificados frequentemente, o que implica em aumento exponencial no custo e na complexidade do projeto.
+\\
+  O modelo WED-flow, como uma alternativa aos modelos clássicos, captura não só a dinâmica da interação entre processos
+como também, com igual importância, os dados gerados assim como os eventos que implicam em alterações desses dados.
+Com isso, o WED-flow é capaz de construir um workflow de estados de dados com suas respectivas condições de transição 
+entre os mesmos. E assim, agregando propriedades de recuperação transacional a esse workflow, prover mecanismos para o 
+tratamento de exceções em tempo real.
+\\
+  Ao utilizar a abordagem WED-flow para modelar um processo de negócio, modificações nos processos são traduzidas em novos
+estados de dados e novas regras, ou novos processos, se traduzem em condições para se atingir um determinado estado de 
+dados. Essa versatilidade permite capturar a natureza de processos verdadeiramente dinâmicos, simplificando a evolução 
+incremental tanto do modelo de negócio quanto do software que o implementa.
 
-  Sistemas computacionais para o gerenciamento de processos de negócio estão sujeitos a constantes modificaçoes estruturais,
-ocasionadas tanto por execessões não previstas na fase de modelagem quanto para atender a novos requisitos. Ao longo do
-tempo, essas modificaçoes tendem a deteriorar a qualidade do código de tais sistemas, aumentando exponencialmente seu custo
-de manutenção além de, eventualmente, comprometer seu desempenho. Combinando eventos, história de execução e estados de dados, 
-a abordagem WED-flow para a modelagem e implementação de processos de negócio propoẽ-se a resolver esse problema fornecendo 
-mecanismos e propriedades de recuperação transacional para o tratamento de exceções em tempo real.
-  Essa versatilidade advinda da abordagem WED-flow simplifica a evolução incremental tanto do modelo de negócio quanto
-do software que o implemente.  
+%problemas da implementacao e justificativa do WED-SQL
   
 
 \subsection{Subsection Heading Here}
