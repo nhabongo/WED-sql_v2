@@ -197,6 +197,8 @@
 \usepackage{algorithmic}
 \usepackage{algorithm}
 \floatname{algorithm}{Algoritmo}
+\renewcommand{\algorithmicrequire}{\textbf{Input:}}
+\renewcommand{\algorithmicensure}{\textbf{Output:}}
 % algorithmic.sty was written by Peter Williams and Rogerio Brito.
 % This package provides an algorithmic environment fo describing algorithms.
 % You can use the algorithmic environment in-text or within a figure
@@ -717,7 +719,7 @@ instância:
 
      INSERT INTO wed_flow DEFAULT VALUES;
 \end{Verbatim}
-  Para cada nova instância é inserida na tabela wed\_flow, o WED-server irá comparar os predicados das WED-conditions definidos
+  Para cada nova instância inserida na tabela wed\_flow, o WED-server irá comparar os predicados das WED-conditions definidos
 na tabela wed\_trig com o WED-state representado na nova instância. Para cada condição satisfeita a respectiva WED-transition
 será disparada na forma de uma entrada na tabela job\_pool e uma notificação será enviada ao WED-worker responsavel
 por executá-la. Além disso, serão adicionadas entradas na tabela wed\_trace registrando os eventos ocorridos. O WED-server
@@ -743,10 +745,50 @@ modificada, a menos que sejam inseridos novos WED-attributes ou que sejam modifi
 caso de não houver WED-transitions pendentes e esse WED-state não for final, a instância será marcada como excessão e uma
 entrada especial será adicionada a tabela job\_pool.
 \begin{algorithm}
-\caption{WED-server}
+\caption{WED-server: disparo de WED-transitions}
 \label{alg1}
 \begin{algorithmic}[1]
-\STATE $S \leftarrow 0$
+\REQUIRE Instância $i$ de um WED-flow
+\ENSURE \textbf{true} se a transação foi bem sucedida,\\
+         \hspace{23pt}\textbf{false} em caso contrário
+\STATE $L \leftarrow$ lista vazia de WED-transitions 
+\STATE $s \leftarrow$ WED-state atual de $i$
+\FOR{$tg$ in WED-triggers}
+\STATE $c,tr \leftarrow$ $tg($WED-condition$)$,$tg($WED-transition$)$
+\IF{$s$ satisfaz $c$}
+\IF{$c$ é a condição final}
+\STATE insira $\_FINAL$ em $L$
+\ELSE
+\STATE insira $tr$ em $L$
+\ENDIF
+\ENDIF
+\ENDFOR
+\IF{$L$ está vazia}
+\IF{$i$ é uma nova instância}
+\STATE Rejeite $i$ e aborte a transação
+\RETURN \FALSE
+\ELSIF{$i$ \textbf{NÃO} possui WED-transitions pendentes}
+\STATE Maque $i$ como WED-state de exceção
+\STATE Insira \_EXCPT em Job\_Pool
+\ENDIF
+\STATE Atualize $i$ em WED\_trace
+\RETURN \TRUE
+\ELSIF{$L$ contém $\_FINAL$}
+\IF{$i$ possui WED-transitions pendentes}
+\STATE Rejeite $i$ e aborte a transação
+\RETURN \FALSE
+\ELSE
+\STATE Marque $i$ como WED-state final
+\STATE Atualize $i$ em WED\_trace
+\RETURN \TRUE
+\ENDIF
+\ELSE
+\FOR{$tr$ em $L$}
+\STATE Insira $tr$ na tabela Job\_Pool
+\STATE Envie notificação para o WED-worker que executa $tr$
+\RETURN \TRUE
+\ENDFOR
+\ENDIF
 
 \end{algorithmic}
 \end{algorithm}
@@ -759,6 +801,13 @@ entrada especial será adicionada a tabela job\_pool.
 
 \end{algorithmic}
 \end{algorithm}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=2.5in]{wed-flow.png}
+\caption{Flow-chart}
+\label{fig_wf}
+\end{figure}
 
 \section{Detalhes de funcionamento}
 %DETALHES DE FUNCIONAMENTO (excessoes, tras simultaneas,continuous query,protocolo de comunicaocao, balanço: coneccoes x demanda,payload pode nao ser o estado atual)
