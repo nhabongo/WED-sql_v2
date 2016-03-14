@@ -49,8 +49,8 @@ possível isolar atributos que não devem ser compartilhados entre diferentes WE
   
   %ER
   O diagrama ER na figura abaixo representa o modelo de dados gerenciado internamente pelo WED-server. Vale notar que, devido
-a flexibilidade de modificaçao da estrutura de dados utilizada para representar os WED-states, não é possível capturar todos
-os aspectos do paradigma WED-flow representando-o por meio de um diagrama Entidade-Relacionamento clássico. Por exemplo,
+a flexibilidade de modificaçao da estrutura de dados exigida para representar os WED-states, não é possível capturar todos
+os aspectos do paradigma WED-flow por meio de um diagrama Entidade-Relacionamento clássico. Por exemplo,
 o relacionamento entre as entidades WED_attr e WED_flow é gerenciado pelo WED-server, ou seja, não há chaves indicando
 a relação entre essas duas entidades. A principal razão disso é pertimir adicionar ou remover WED-attributes em tempo de execução, 
 o que demanda modificações na estrutura de dados que, por sua vez, podem ser efetuadas de maneira ininterrupta.
@@ -111,6 +111,9 @@ na coluna "wid", e os WED-attributes.
 
   %FUNCIONAMENTO
   %Definir novo WED-flow (1 por db, atributos de interesse)
+  Embora seja possível definir multiplos WED-flows em uma única base de dados, o WED-server permite que cada um deles 
+esteja localizado em uma base de dados distinta, de acordo com um determinado significado semântico. Com isso também é 
+possível isolar atributos que não devem ser compartilhados entre diferentes WED-flows. 
   Para se criar um novo WED-flow é preciso definir um conjunto de WED-atributes e um conjunto de WED-triggers associando
 WED-transitions à WED-conditions. Essa definição, por ora, é expressa em SQL (futuramente em WSQL). Veja um exemplo na
 figura <ex1.wsql>
@@ -132,7 +135,7 @@ associado a cada WED-transition.
   Um WED-worker é uma aplicação cliente do WED-server e, por esse motivo, pode ser escrito em qualquer linguagem de progra-
 mação que tenha suporte para conectar-se ao sgbd PostgreSQL e que implemente o protocolo de comunicação do WED-server (veja
 o capitulo xx). 
-  No escopo deste trabalho os WED-workers são escritos em python utilizando-se o pacote BaseWorker, que acompanha o WED-SQL.
+  No escopo deste trabalho os WED-workers são escritos na linguagem Python utilizando-se o pacote BaseWorker, que acompanha o WED-SQL.
 A figura abaixo ilustra a definição de um novo WED-worker:
 
   O primeiro passo é importar a classe abstrata BaseClass do pacote BaseWorker. Essa classe implementa a lógica do protocolo

@@ -194,7 +194,9 @@
 
 % *** SPECIALIZED LIST PACKAGES ***
 %
-%\usepackage{algorithmic}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\floatname{algorithm}{Algoritmo}
 % algorithmic.sty was written by Peter Williams and Rogerio Brito.
 % This package provides an algorithmic environment fo describing algorithms.
 % You can use the algorithmic environment in-text or within a figure
@@ -347,6 +349,7 @@
 \usepackage[brazilian]{babel}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+\usepackage{fancyvrb}
 
 % correct bad hyphenation here
 \hyphenation{op-tical net-works semi-conduc-tor}
@@ -496,10 +499,10 @@ de negócio modernos.
 %\blindtext
 /* Incluir um resumo das definições do WED-flow ? */\\
 Com o objetivo de  ser utilizada em um ambiente distribuido, por exemplo por meio de web-services, e também para contemplar 
-o controle de transações longas \cite{MOLINA}, a WED-SQL foi construida utilizando a arquitetura cliente-servidor. A componente
+o controle de transações longas \cite{MOLINA}, o WED-SQL foi construido utilizando a arquitetura cliente-servidor. A componente
 servidor, ou WED-server, é responsável por fazer o controle transacional de acordo com as WED-conditions definidas
 para um determinado WED-flow, disparando as WED-triggers conforme necessário. Já a componente cliente, ou WED-worker (
-quem sabe até WED-service), é quem efetivamente realiza as WED-transitions.
+quem sabe até WED-service ?), é quem efetivamente realiza as WED-transitions.
 \\
 \subsection{WED-worker e WED-server}
 O WED-server é, basicamente, uma extensão para o sgbd Postgresql composta de triggers, tabelas de controle e "stored
@@ -519,6 +522,248 @@ aproveita o arcabouço transacional clássico (propriedades ACID, controle de co
 associada a um ou mais WED-workers, dependendo da demanda de trabalho gerada pelo WED-server, e cada WED-worker é especializado
 em realizar uma WED-transition específica. A quantidade máxima de WED-workers trabalhando simultaneamente é limitada
 apenas pela quantidade de conecções que um dado WED-server é capaz de manter abertas.
+
+\subsection{Estrutura de dados}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=2.5in]{ER.png}
+\caption{Diagrama ER do WED-server}
+\label{fig_er}
+
+\end{figure}
+ O diagrama Entidade-Relacionamento na figura~\ref{fig_er} representa o modelo de dados gerenciado internamente pelo 
+WED-server. Vale notar que, devido a flexibilidade de modificaçao da estrutura de dados exigida para representar os WED-states, 
+não é possível capturar todos os aspectos do paradigma WED-flow por meio de um diagrama Entidade-Relacionamento clássico. Por exemplo,
+o relacionamento entre as entidades WED\_attr e WED\_flow é gerenciado pelo WED-server, ou seja, não há chaves indicando
+a relação entre essas duas entidades. A principal razão disso é pertimir adicionar ou remover WED-attributes em tempo de execução, 
+o que demanda modificações na estrutura de dados que, por sua vez, podem ser efetuadas de maneira ininterrupta.
+\\
+\indent Do relacionamento entre as entidades WED\_flow e WED\_trig resultam a entidade fraca Job\_Pool, que contém as WED-transitions
+a serem executadas, e a entidade fraca WED\_trace, que contém os registros de execução de cada instância dos WED-flows.
+
+\subsection{Tabelas de controle}
+
+O WED-server utiliza cinco tabelas para definir regras, propriedades e controlar o fluxo de execução dos WED-flows: WED\_attr,
+WED\_flow, WED\_trace, WED\_trig e Job\_pool.
+\\
+\indent  Os WED-attributes são definidos na tabela WED\_attr por um nome e, opcionalmente, por um valor padrão representados 
+pelas colunas "aname" e "adv" respectivamente. Cada WED-attribute é identificado univocamente por seu nome, que também é 
+a chave primária da tabela. Ao criar-se um novo WED-attribute, ou seja, ao inserir-se uma nova linha na tabela WED\_attr, 
+uma coluna de mesmo nome será automaticamente criada na tabela WED\_flow.
+\\
+\indent A tabela WED\_trig contém as WED-triggers, ou seja, cada entrada representa a associação de uma WED-condition com uma 
+WED-transition. Possui os seguintes atributos:
+
+\begin{itemize}
+\item $tgid$, é o identificador único de uma WED-trigger;
+\item $tgname$, atributo opcional utilizado para dar um nome à WED-trigger;
+\item $enabled$, permite que a WED-trigger seja desativada;
+\item $trname$, identificador único da WED-transition associada.
+\item $cname$, atributo opcional que pode ser utilizado para dar um nome à WED-condition associada;
+\item $cpred$, predicado da WED-condition associada. Aceita qualquer predicado valido na claúsula WHERE em SQL;
+\item $cfinal$, utilizada para indicar qual é a condição final. Embora apenas uma WED-condition possa ser marcada como final,
+           o operado lógico \emph{OU} pode ser utilizado em seu predicado para definir-se multiplos WED-states finais.
+\item $timeout$, tempo limite para que um WED-worker finalize a WED-transition representada por "trname".
+
+\end{itemize}
+
+O histórico de execução das WED-transition fica armazenado na tabela WED\_trace, que possui os seguintes atributos:
+\begin{itemize}  
+\item $wid$, referência ao identificador da instância do WED-flow;
+\item $state$, WED-state, em formato json, que disparou as WED-transitions listadas em "trf";
+\item $trf$, lista de WED-transitions disparadas pelo WED-state em "state";
+\item $trw$, WED-transition que gravou o WED-state representado por "state". Um valor nulo indica que esse registro representa o WED-state inicial;
+\item $status$, indica o tipo do WED-state representado em "state". Os possíveis valores são "F","E" ou "R" que indicam que o WED-state
+           é final, excessão ou regular, respectivamente.
+\item $tstmp$, indica o momento em que ocorreu o registro. Pode se recuperar a história de execução de uma instância ordenando-se
+          as entradas nessa tabela por essa coluna.
+\end{itemize}
+  A tabela Job\_Pool contém entradas referentes as WED-transitions pendentes que precisam ser executadas pelos WED-workers.
+Suas colunas são:
+\begin{itemize}  
+\item $wid$, referência ao identificador da instancia do WED-flow;
+\item $tgid$, referência a WED-trigger que disparou a WED-transition "trname";
+\item $trname$, nome da WED-transition a ser executada;
+\item $lckid$, parâmetro opcional que pode ser utilizado pelos WED-workers para se identificarem. Futuramente, poderá ser utilizado
+          para fins de autenticação e validação dos WED-workers;
+\item $timeout$, tempo limite para a execução da WED-transition (tempo limite da transação). É uma cópia da coluna de mesmo
+            nome da tabela WED\_trig;
+\item $payload$, WED-state, em formato json, que disparou a referida WED-transition. Pode ser utilizado, por exemplo, por
+            WED-workers que executam WED-transitions associadas a WED-conditions que possuem o operador lógico "OR" em 
+            seu predicado.
+\end{itemize}
+  Finalmente, a tabela WED\_flow é o ponto de entrada para inicializar-se uma nova instância. Essa tabela é criada dinâmicamente
+de acordo com os WED-attributes definidos na tabela WED\_attr. Cada entrada em WED\_attr corresponde a uma coluna em WED\_flow.
+Suas entradas são o WED-state atual de cada instância, ou seja, são tuplas formadas por um identificador, representado
+na coluna "wid", e os WED-attributes. 
+
+\section{Funcionamento}
+\begin{figure}[!t]
+\begin{Verbatim}[fontsize=\tiny]
+BEGIN;
+
+INSERT INTO wed_attr (aname, adv) VALUES ('a1','ready');
+INSERT INTO wed_attr (aname) VALUES ('a2'),('a3');
+
+INSERT INTO wed_trig (tgname,trname,cname,cpred,timeout) 
+  VALUES ('t1','tr_a2','c1', $$a1='ready' and (a2 is null)$$, '3d18h');
+INSERT INTO wed_trig (tgname,trname,cname,cpred,timeout) 
+  VALUES ('t2','tr_a3','c2', $$a1='ready' and (a3 is null)$$, '00:00:30');
+INSERT INTO wed_trig (tgname,trname,cname,cpred,timeout) 
+  VALUES ('tf','tr_final','cf', $$a1='ready' 
+          and (a2 is not null) 
+          and (a3 is not null)$$, '00:00:10');
+INSERT INTO wed_trig (cpred,cfinal) VALUES ($$a1 <> 'ready'$$, True);
+
+COMMIT;
+\end{Verbatim}
+\caption{Exemplo de definição de um novo WED-flow}
+\label{fig_wf}
+\end{figure}
+ Embora seja possível definir multiplos WED-flows em uma única base de dados, o WED-server permite que cada um deles 
+esteja localizado em uma base de dados distinta, de acordo com um determinado significado semântico. Com isso também é 
+possível isolar atributos que não devem ser compartilhados entre diferentes WED-flows. 
+\\
+\indent Para se criar um novo WED-flow é preciso definir um conjunto de WED-atributes e um conjunto de WED-triggers associando
+WED-transitions à WED-conditions. Essa definição, por ora, é expressa em SQL (futuramente em WSQL). Veja um exemplo na
+figura~\ref{fig_wf}.
+\\
+\indent Note que os valores dos predicados para as WED-conditions, representados por meio da coluna "cpred", tem a mesma sintaxe
+utilizada para expressar as restrições de uma cláusula WHERE em SQL. De fato, a expressão em "cpred" será utilizada as-is
+pelo WED-server para disparar as WED-transitions. Ao utilizar-se duplo \$ para delimitar essa expressão, elimina-se a necessidade
+de "escapar" as aspas simples ou outros caracteres especiais.
+\\
+\indent  Note também que a condição final de um WED-flow é declarada nessa mesma tabela WED\_trig, embora de modo simplificado.
+São necessários apenas o predicado em "cpred" e o valor Verdade em "cfinal". Caso não haja uma condição final na tabela
+WED\_trig, todas as instâncias desse WED-flow terminarao em um WED-state de excessão.
+\\
+\indent É recomendado encapsular a definição de um WED-flow em uma única transação, uma vez que, no caso de um erro de sintaxe
+na definição de uma WED-trigger, por exemplo, seria necessário remover manualmente do WED-server as definições executadas
+até o momento do erro.
+
+\subsection{Definindo os WED-workers}
+Como mencionado anteriormente, quem executa as WED-transitions disparadas pelo WED-server são os WED-workers. Sendo assim,
+é necessário criar esses WED-workers e associá-los às respectivas WED-transitions. É recomendado ter ao menos um WED-worker
+associado a cada WED-transition.
+\\
+\indent Um WED-worker é uma aplicação cliente do WED-server e, por esse motivo, pode ser escrito em qualquer linguagem de progra-
+mação que tenha suporte para conectar-se ao sgbd PostgreSQL e que implemente o protocolo de comunicação do WED-server (veja
+o capitulo ???). No escopo deste trabalho os WED-workers são escritos na linguagem Python utilizando-se o pacote BaseWorker, 
+que acompanha o WED-SQL. A figura~\ref{fig_ww} ilustra a definição de um novo WED-worker:
+
+\begin{figure}[!t]
+\begin{Verbatim}[fontsize=\tiny]
+from BaseWorker import BaseClass
+import sys
+
+class MyWorker(BaseClass):
+    
+    #  trname and dbs variables are static in order to conform 
+    #with the definition of wed_trans()
+        
+    trname = 'tr_aaa'
+    dbs = 'user=aaa dbname=aaa application_name=ww-tr_aaa'
+    wakeup_interval = 5
+    
+    def __init__(self):
+        super().__init__(MyWorker.trname,MyWorker.dbs,MyWorker.wakeup_interval)
+    
+    # Compute the WED-transition and return a string as the new WED-state, 
+    #using the SQL SET clause syntax. Return None to abort transaction
+    def wed_trans(self,payload):
+        print (payload)
+        
+        return "a2='done', a3='ready', a4=(a4::integer+1)::text"
+        #return None
+        
+w = MyWorker()
+
+try:
+    w.run()
+except KeyboardInterrupt:
+    print()
+    sys.exit(0)
+\end{Verbatim}
+\caption{Exemplo de definição de um novo WED-flow}
+\label{fig_ww}
+\end{figure}
+
+O primeiro passo é importar a classe abstrata \emph{BaseClass} do pacote \emph{BaseWorker}. Essa classe implementa a lógica do protocolo
+de comunicação com o WED-server e também gerencia as conecções com o mesmo. 
+\\
+\indent  O proximo passo é de fato criar o WED-worker, definindo uma nova classe concreta que implemente o método wed\_trans() e
+defina os seguintes atributos utilizados para inicializar a \emph{BaseClass}:
+\begin{itemize}
+\item \emph{trname}: nome da WED-transition que será executada por esse WED-worker. Precisa ser o mesmo utilizado na definicão
+           do WED-flow;
+\item \emph{dbs}: parametros da conecção com o WED-server no formato aceito pelo driver \emph{psycopg2}. No mínimo devem ser especificados
+        o usuário, o nome da base de dados onde o WED-flow foi carregado e o nome do WED-worker por meio do campo \emph{"application\_name"};
+\item \emph{wakeup\_interval}: é o intervalo de tempo no qual o WED-worker fica suspenso esperando por uma notificação do WED-server (veja capitulo ??);
+\end{itemize}
+  O método wed\_trans() recebe como parametro o WED-state da instância do WED-flow que disparou a transação, e retorna uma 
+string com os novos valores dos WED-attributes dessa mesma instância. A sintaxe utilizada para esse valor de retorno deve
+ser a mesma utilizada em uma cláusula SET de uma cláusula UPDATE em SQL. O valor "None" pode ser retornado para abortar
+a transação. Essa classe concreta que implementa o WED-worker deve então ser instanciada e executada, invocando-se o método run().
+
+\section{Algoritmos}
+Após definir-se e carregar-se um WED-flow em uma base de dados do WED-server e inicializar-se seus respectivos WED-workers, uma
+nova instância é inicializada inserindo-se um WED-state na tabela WED\_flow. Essa nova instância receberá um identificador
+único que será utilizado tanto para o registro de sua história de execução, na tabela WED\_trace, quanto para o controle
+transacional das WED-transitions. Se os valores padrao definidos para os WED-attributes, por meio da coluna "adv", na 
+tabela WED\_attr forem os valores de um WED-state inicial, basta executar o comando abaixo para se inicializar uma nova
+instância:
+\begin{Verbatim}[fontsize=\small]
+
+     INSERT INTO wed_flow DEFAULT VALUES;
+\end{Verbatim}
+  Para cada nova instância é inserida na tabela wed\_flow, o WED-server irá comparar os predicados das WED-conditions definidos
+na tabela wed\_trig com o WED-state representado na nova instância. Para cada condição satisfeita a respectiva WED-transition
+será disparada na forma de uma entrada na tabela job\_pool e uma notificação será enviada ao WED-worker responsavel
+por executá-la. Além disso, serão adicionadas entradas na tabela wed\_trace registrando os eventos ocorridos. O WED-server
+ficará então aguardando até que uma nova instância ou uma WED-transition seja iniciada. Vale notar que WED-states iniciais 
+que não sejam finais e que não disparem ao menos uma WED-transition serão rejeitados pelo WED-server.
+\\
+\indent  Na sequencia, os WED-workers podem atuar de dois modos distintos: imediatamente ao receber uma notificação do WED-server, ou quando o limite
+de tempo de espera por notificações termina (atributo wakeup\_interval) e, nesse caso, é preciso consultar a tabela job\_pool em
+busca de WED-transitions pendentes. Independentemente do modo de atuação e antes de inicializar a transação, cada WED-worker 
+precisa solicitar ao WED-server uma trava (advisory\_lock) na WED-transition e em qual instância do WED-flow será executada a transação. 
+Essa trava é necessária tanto para avisar a outros WED-workers que estejam trabalhando na mesma WED-transition que não a 
+executem para a mesma instância, quanto para que o WED-server possa controlar o tempo limite da execução de cada WED-transition. 
+Não é possivel executar uma WED-transition sem que o respectivo WED-worker consiga obter essa trava previamente.
+\\
+\indent De posse da referida trava, um WED-worker terá que finalizar a transação dentro do tempo limite de execução da WED-transition.
+Essa transação é finalizada atualizando-se o WED-state atual da instância em que está sendo executada a WED-transition por meio
+de um UPDATE na tabela wed\_flow.
+\\
+\indent Quando uma instância é atualizada, o WED-server novamente irá verificar se esse novo WED-state dispara novas WED-transitions
+e, em caso afirmativo, registrá-las na tabela job\_pool, além que registrar os novos eventos em wed\_trace. Caso esse novo WED-state
+satifaça a condição final e não haja nenhuma WED-transition pendente, essa instancia é marcada como finalizada e não poderá ser
+modificada, a menos que sejam inseridos novos WED-attributes ou que sejam modificadas ou adicionadas novas WED-triggers. Em
+caso de não houver WED-transitions pendentes e esse WED-state não for final, a instância será marcada como excessão e uma
+entrada especial será adicionada a tabela job\_pool.
+\begin{algorithm}
+\caption{WED-server}
+\label{alg1}
+\begin{algorithmic}[1]
+\STATE $S \leftarrow 0$
+
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{WED-worker}
+\label{alg1}
+\begin{algorithmic}[1]
+\STATE $S \leftarrow 0$
+
+\end{algorithmic}
+\end{algorithm}
+
+\section{Detalhes de funcionamento}
+%DETALHES DE FUNCIONAMENTO (excessoes, tras simultaneas,continuous query,protocolo de comunicaocao, balanço: coneccoes x demanda,payload pode nao ser o estado atual)
+
+%escalabilidade (horizontal, vertical, consistencia transacional, pg_shard)
 
 % needed in second column of first page if using \IEEEpubid
 %\IEEEpubidadjcol
@@ -605,9 +850,10 @@ apenas pela quantidade de conecções que um dado WED-server é capaz de manter 
 % floats. This can be corrected via the \fnbelowfloat command of the
 % stfloats package.
 
+\section{Trabalhos Futuros}
+%TRABALHOS FUTUROS (linguagem, gerenciador de conecções, remocao de attr, forcar wed-state inicial)
 
-
-\section{Conclusion}
+\section{Conclusão}
 \blindtext
 
 
@@ -630,7 +876,7 @@ apenas pela quantidade de conecções que um dado WED-server é capaz de manter 
 
 
 \appendices
-\section{Proof of the First Zonklar Equation}
+\section{Apd }
 \blindtext
 
 % use section* for acknowledgement
