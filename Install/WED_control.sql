@@ -313,7 +313,7 @@ CREATE OR REPLACE FUNCTION kernel_function() RETURNS TRIGGER AS $kt$
         
         new_trace_entry(job[2],trfired,status)
         set_st_status(status)
-        
+
         return "OK"
         
        

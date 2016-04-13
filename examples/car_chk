@@ -1,0 +1,15 @@
+items to evaluate: tyres, brakes, alignment
+
+items values: tyres -> 1 - 5 (1-unsafe, 2-bad, 3-replace, 4-good, 5-excellent)
+              brakes -> 1 - 4  (1-full service, 2-disc and pads, 3-pads only, 4-good)
+              alignment -> 1 - 2 (1-bad, 2-good)
+              
+car condition: good -> tyres > 3 and brakes = 4 and alignment = 2
+               maintance -> tyres <= 3 or brakes < 4 or alignment = 1
+               
+in case of maintance is needed:
+               tyres ? replace and align
+               brakes ? service
+               alignment ? check tyres first ( >= 3)
+               
+ 
