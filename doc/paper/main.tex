@@ -797,7 +797,27 @@ entrada especial será adicionada a tabela job\_pool.
 \caption{WED-worker}
 \label{alg1}
 \begin{algorithmic}[1]
-\STATE $S \leftarrow 0$
+\REQUIRE Nome da WED-transition: \emph{trname}
+\ENSURE \textbf{true} se a transação foi bem sucedida,\\
+         \hspace{23pt}\textbf{false} em caso contrário
+\LOOP
+\STATE $n \leftarrow$ Valor nulo
+\WHILE{$n$ é nula}
+\STATE $n \leftarrow espera\_notificacao(trname,wkup)$
+\IF [nenhuma notificação recebida após esperar $wkup$ segundos]{$n$ é nula}
+\STATE $n \leftarrow $ busque por WED-transitions $trname$ pendentes no WED-server
+\ENDIF
+\ENDWHILE
+\STATE Inicia a transação 
+\IF {obter\_trava($n$)} 
+\STATE Execute a WED-transition $trname$ para uma determinada instância $i$ do WED-flow
+\STATE Finalize a transação
+\RETURN \TRUE
+\ELSE
+\STATE Aborte a transação
+\RETURN \FALSE
+\ENDIF  
+\ENDLOOP
 
 \end{algorithmic}
 \end{algorithm}
@@ -810,7 +830,7 @@ entrada especial será adicionada a tabela job\_pool.
 \end{figure}
 
 \section{Detalhes de funcionamento}
-%DETALHES DE FUNCIONAMENTO (excessoes, tras simultaneas,continuous query,protocolo de comunicaocao, balanço: coneccoes x demanda,payload pode nao ser o estado atual)
+%DETALHES DE FUNCIONAMENTO (excessoes, tras simultaneas,continuous query,protocolo de comunicaocao, balanço: coneccoes x demanda,payload pode nao ser o estado atual mvcc)
 
 %escalabilidade (horizontal, vertical, consistencia transacional, pg_shard)
 
