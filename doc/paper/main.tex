@@ -687,7 +687,7 @@ except KeyboardInterrupt:
     print()
     sys.exit(0)
 \end{Verbatim}
-\caption{Exemplo de definição de um novo WED-flow}
+\caption{Exemplo de definição de um novo WED-worker}
 \label{fig_ww}
 \end{figure}
 
@@ -829,8 +829,13 @@ entrada especial será adicionada a tabela job\_pool.
 \label{fig_wf}
 \end{figure}
 
-\section{Detalhes de funcionamento}
-%DETALHES DE FUNCIONAMENTO (excessoes, tras simultaneas,continuous query,protocolo de comunicaocao, balanço: coneccoes x demanda,payload pode nao ser o estado atual mvcc)
+\section{Gerenciamento transacional}
+Cada instância de um WED-flow pode ser vista como uma Transação Longa (LLT) e, desse modo, de acordo com ~\cite{SGD87},
+as WED-transitions podem ser vistas como passos Saga. Sendo assim, é função do WED-server garantir a integridade dos estados
+de dados, manter a consistência transacional e garantir que todo WED-flow termine ou em um estado final ou em um estado
+de excessão. Nesse caso, deve permitir que um passo compensatório possa ser executado. 
+%locks are needed for: 1-keep track of wed-trans; 2-concurrency control between wed-workers (pg_locks,
+%DETALHES DE FUNCIONAMENTO (locks(pg_row_locks),keep connection alive(pessimistic locking),excessoes, tras simultaneas,continuous query,protocolo de comunicaocao, balanço: coneccoes x demanda,payload pode nao ser o estado atual mvcc)
 
 %escalabilidade (horizontal, vertical, consistencia transacional, pg_shard)
 
@@ -999,6 +1004,10 @@ João Eduardo Ferreira, Kelly Rosa Braghetto, Osvaldo Kotaro Takai e
 Calton Pu.\emph{ Transactional recovery support for robust exception handling in business process
 services.} Em Proceedings of the 19th International Conference on Web Services (ICWS), páginas
 303–310, 2012
+
+\bibitem{SGD87}
+Hector Garcia Molina, Kenneth Salem.
+\emph{Sagas}, Em Proceeding of the 1987 ACM SIGMOD International Conference on Management of Data, páginas 249-259, 1987
 
 %\bibitem{IEEEhowto:kopka}
 %H.~Kopka and P.~W. Daly, \emph{A Guide to \LaTeX}, 3rd~ed.\hskip 1em plus

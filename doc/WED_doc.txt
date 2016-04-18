@@ -43,3 +43,5 @@ create SP to retrive the state of an instance given its wid (ST_STATUS table)
 re-run match algorithm in case of modifications on tables WED_attr or WED_trig (via SP ?)
 kill idle transactions that do not request an advisory_lock
 maybe is it possible to use only one bg_worker for all databases (attach it to template1 ?)
+exceptions ... (job siting on job_pool for too long may be an exception)
+how to define and where to store compensation steps ?
