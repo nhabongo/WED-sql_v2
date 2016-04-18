@@ -830,13 +830,20 @@ entrada especial será adicionada a tabela job\_pool.
 \end{figure}
 
 \section{Gerenciamento transacional}
-Cada instância de um WED-flow pode ser vista como uma Transação Longa (LLT) e, desse modo, de acordo com ~\cite{SGD87},
-as WED-transitions podem ser vistas como passos Saga. Sendo assim, é função do WED-server garantir a integridade dos estados
+Cada instância de um WED-flow pode ser vista como uma Transação Longa (LLT) e, de acordo com ~\cite{SGD87},
+suas WED-transitions podem ser vistas como passos Saga. Sendo assim, é função do WED-server garantir a integridade dos estados
 de dados, manter a consistência transacional e garantir que todo WED-flow termine ou em um estado final ou em um estado
 de excessão. Nesse caso, deve permitir que um passo compensatório possa ser executado. 
+\par
+Nas sessoes seguintes serao apresentados em detalhes os mecanismos de controle transacional utilizados e o protocolo de
+comunicação entre multiplos WED-workers e um WED-server.
 %locks are needed for: 1-keep track of wed-trans; 2-concurrency control between wed-workers (pg_locks,
-%DETALHES DE FUNCIONAMENTO (locks(pg_row_locks),keep connection alive(pessimistic locking),excessoes, tras simultaneas,continuous query,protocolo de comunicaocao, balanço: coneccoes x demanda,payload pode nao ser o estado atual mvcc)
-
+%DETALHES DE FUNCIONAMENTO (seriação,locks(pg_row_locks),keep connection alive(pessimistic locking),excessoes, tras simultaneas,continuous query,protocolo de comunicaocao, balanço: coneccoes x demanda,payload pode nao ser o estado atual mvcc)
+\subsection{Controle de concorrência e paralelismo}
+O PostgreSQL utiliza o modelo MVCC para manter a integridade dos dados. Isso significa que cada transação enxerga uma "foto"
+do banco de dados no momento em que a mesma inicia, garantindo seu isolamento. Nesse modelo de controle de concorrencia,
+travas de leitura não conflitam com travas de escrita de dados.
+\par As transações podem ser executadas em três níveis de isolamento: Read commited, Repetable read e Serializable.
 %escalabilidade (horizontal, vertical, consistencia transacional, pg_shard)
 
 % needed in second column of first page if using \IEEEpubid
