@@ -839,6 +839,40 @@ Nas sessoes seguintes serao apresentados em detalhes os mecanismos de controle t
 comunicação entre multiplos WED-workers e um WED-server.
 %locks are needed for: 1-keep track of wed-trans; 2-concurrency control between wed-workers (pg_locks,
 %DETALHES DE FUNCIONAMENTO (seriação,locks(pg_row_locks),keep connection alive(pessimistic locking),excessoes, tras simultaneas,continuous query,protocolo de comunicaocao, balanço: coneccoes x demanda,payload pode nao ser o estado atual mvcc)
+\subsection{Notificações}
+%send notify vs continuous query
+Ao modelar um sistema cujas operações principais são realizadas com base em eventos de dados, é preciso também conceber-se
+algum tipo de mecanismo capaz de capturar tais eventos. Quando esses dados estão armazenados em um SGBD, muitas vezes o
+único mecanismo de detecção disponível é continuamente realizar uma consulta (query) a cada intervalo de tempo. Esse modelo,
+conhecido por \emph{Continuous Query}(ref...), possui alguns inconvenientes embora, muitas vezes, é a única solução disponível.
+\par O primeiro problema com o \emph{Continous Query} é que é preciso manter uma conecção continuamente aberta com
+o SGBD durante toda a execução do sistema, mesmo que ela fique ociosa em boa parte do tempo. Alternatvamente pode-se abrir e fechar essa conecção 
+inumeras vezes em um curto periodo de tempo, nesse caso o custo da consulta é significativamente menor do que o custo de
+se realizar esse procedimento. Em ambos os casos há um desperdício de recursos computacionais, assim como de consumo de energia, uma
+vez que esse consulta será executada em \emph{spin lock}.
+\par Outro detalhe desse modelo é que, por se tratar de uma consulta que é realizada a cada intervalo de tempo, há sempre um
+atraso na detecção de mudanças nos estados de dados, que por sua vez pode acabar comprometendo a capacidade do sistema
+de responder a eventos em tempo real.
+%sleep
+\par O SGBD PostgreSQL oferece um mecanismo que pode ser utilizado como uma alternativa ao modelo anterior: Notificações Assíncronas.
+Por meio do comando "NOTIFY <canal>,<payload>", o SGDB pode notificar de modo assíncrono um cliente que tenha se registrado, via comando "LISTEN <canal>", 
+em um canal de notificação específico. Além disso, também é possivel enviar uma mensagem ao cliente, por meio de "<payload>". Essa mensagem pode
+ser, por exemplo, uma cadeia de characteres no formato \emph{JSON}.
+\par A grande vantagem do modelo de Notificações Assíncronas sobre o modelo de Continuous Query é que o cliente recebe a notificação em tempo real
+da ocorrência do evento de dados, contanto que o mesmo esteja escutando no canal de notificação nesse momento. Além disso, devido ao fato de o cliente
+não precisar verificar a cada certo intervalo de tempo se há alguma nova mensagem, ele pode esperar pela notifição "dormindo", ou seja, sua execução
+pode ser suspensa enquanto não há uma nova mensagem, liberando os recursos da máquina para realizar outras tarefas assim como economizando energia.
+\par No WED-SQL são utilizados os dois modelos de detecção de eventos de dados. Durante uma execução normal, o WED-server notifica os WED-workers
+sempre que uma nova WED-trigger é disparada, ou seja, sempre que surge uma nova tarefa na tabela Job\_Pool. Além disso, a mensagem enviada aos WED-workers
+é exatamente a nova tarefa que foi gerada, eliminando a necessidade de se fazer uma busca na tabela Job\_Pool. Cada WED-transition possui um canal exclusivo
+de notificações identificado por seu nome definido na tabela WED\_trig. Os WED-workers registram-se em seu respectivo canal e suspendem sua operação até
+que sejam acordados com uma notificação. Caso uma notificação seja enviada e não haja ninguem escutando em um determinado canal, a mesma será descartada.
+\par Afim de garantir que todas as WED-transitions sejam eventualmente executadas, e de preferência sejam iniciadas no menor intervalo de tempo possível, os
+WED-workers não dependem exclusivamente das notificações recebidas para funcionar. De fato, ao inicializar uma nova conecção com o WED-server, o primeiro
+passo é procurar por WED-transitions pendentes de execução na tabela Job\_Pool, e só após entrar em estado de suspensão aguardando por notificações. Os 
+WED-workers podem ainda ser configurados para "acordar" após um certo intervalo de tempo sem receber novas notificações e verificar por tarefas pendentes,
+uma vez que, em se tratando de um sistema potencialmente distribuido, é possível que mensagens possam se perder por falhas na rede de comunicaçao ou por
+outros eventos nao detectáveis tanto pelo WED-server quanto pelos WED-workers. 
 \subsection{Controle de concorrência e paralelismo}
 O PostgreSQL utiliza o modelo MVCC para manter a integridade dos dados. Isso significa que cada transação enxerga uma "foto"
 do banco de dados no momento em que a mesma inicia, garantindo seu isolamento. Nesse modelo de controle de concorrencia,
