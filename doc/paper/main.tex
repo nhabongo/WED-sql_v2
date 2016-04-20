@@ -877,56 +877,61 @@ outros eventos nao detectáveis tanto pelo WED-server quanto pelos WED-workers.
 
 
 
-\subsection{Controle de concorrência e paralelismo}
+\subsection{Controle transacional e concorrência}
 %wed-trans, why lock ?, types of locks , why advisory(pg_row_locks)
 %locks are needed for: 1-keep track of wed-trans; 2-concurrency control between wed-workers (pg_locks, select for update nowait)
 
-Antes que uma WED-transition possa ser executada, é necessário que a respectiva tarefa esteja registrada na tabela Job_Pool e que
+Antes que uma WED-transition possa ser executada, é necessário que a respectiva tarefa esteja registrada na tabela Job\_Pool e que
 o WED-worker que irá executá-la garanta exclusividade de execução. Isso é efeito requisitando uma trava ao WED-server na tarefa
 especificada. Essa trava é necessária por dois motivos: permitir que o WED-server tenha controle sobre o tempo de vida da transação;
 gerenciar conflitos entre transações concorrentes.
-\par Cada WED-transition pode ter multiplos WED-workers identicos associados. Isso pode ser necessário para atender a demanda 
-gerada por um WED-flow com muitas instâncias. Para evitar que mais de um WED-worker execute a mesma WED-transition na mesma
-instância, o mesmo deve registrar interesse em executá-la por meio da requisição ao WED-server de uma trava exclusiva na linha
-correspondente da tabela Job_Pool, que é identificada por seu WED-flow id (wid) e a WED-trigger id (tgid) que a disparou.
 
-
-
-
-
-
-
-\par O modelo WED-flow prevê que cada WED-transition tenha um tempo limite de execução. Para atender esse requisito, o WED-server
+\par O modelo WED-flow prevê que cada WED-transition tenha um tempo limite de execução. Para atender a esse requisito, o WED-server
 precisa identificar a transição que está sendo executada e monitorar o seu tempo de vida. Vale lembrar que a execução de uma
 WED-transition está encpsulada em uma unica transação. Um modo de forçar as transações a se identificarem é exigir que as mesmas
 solicitem uma trava exclusiva ao WED-server. Outra possível solução seria identificar a transação semanticamente de acordo
 com o novo WED-state gerado, e nesse caso teriamos dois problemas: o WED-server apenas seria capaz de identificar a transação
 no momento da atualização da instância, fazendo com que as transações pudessem ficar ativas muito além de seu tempo limite para
 só então serem finalizadas, potencialmente limitando o tempo máximo de execução para todas as transações; seria necessário manter 
-um conjunto de possíveis estados de dados pré-definidos, limitando a capacidade do modelo em lidar com exceções. De qualquer forma,
-essas travas de execução ja são utilizadas para resolver conflitos entre WED-workers que realizam a mesma WED-transitions, por isso
+um conjunto de possíveis estados de dados pré-definidos, limitando a capacidade do modelo em lidar com exceções. Além do mais,
+o WED-SQL utiliza essas travas de execução para resolver problemas de concorrência entre WED-workers e, com isso,
 é a solução adotada para a identificação das transações. 
 
 
+\par Cada WED-transition pode ter multiplos WED-workers identicos associados. Isso pode ser necessário para atender a demanda 
+gerada por um WED-flow com muitas instâncias. Para evitar que mais de um WED-worker execute a mesma WED-transition na mesma
+instância, o mesmo deve registrar interesse em executá-la por meio da requisição ao WED-server de uma trava exclusiva na linha
+correspondente da tabela Job\_Pool, que é identificada por seu WED-flow id (wid) e a WED-trigger id (tgid) que a disparou.
+
+\par O SGDB PostgreSQL oferece um mecanismo de travas explicitas para aplicaçoes que necessitam exercer um controle mais
+refinado sobre os dados acessados. Essas travas podem ser utilizadas tanto a nível de tabelas quanto a nivel de tuplas, ou seja,
+linhas ou registros das tabelas. No contexto do WED-SQL, apenas as travas a nivel de tuplas são utilizadas explicitamente.
+\par A trava a nivel de tupla mais comumente utilizada é chamada \emph{FOR UPDATE}. Utilizada em conjunto com o comando SQL
+\emph{SELECT}, essa trava, de acesso exclusivo, faz com que outras transações concorrentes tenham que esperar ou abortar
+ao tentarem acessar a tupla bloqueada. Outro tipo de trava que também pode ser utilizada a nível de tupla são as 
+\emph{Advisory Locks}, ou travas semnaticas. Para utilizar esse tipo de trava é preciso definir seu significado semântico na aplicação, uma vez que
+o PostgreSQL não obriga que sua regra de acesso seja cumprida, ou seja, os registros não são realmente bloqueados. 
+\par Por exemplo, no WED-server as WED-transitions pendentes são identificadas pelo par (wid,tgid). Esse identificador é
+utilizado pelos WED-workers para requisitar uma \emph{Advisory Lock}, que será concedida apenas à primeira transação que
+a solicitar para o dado registro. As demais transações que tentarem acessar o mesmo registro não conseguiram obter a trava,
+e estarão livres para tentar executar outras WED-transitions pendentes, embora o registro não esteja de fato bloqueado. Vale
+lembrar que, obter essa trava para a instância específica que será atualizada, é mandatório para completar a transação com sucesso.
+\par Por que são utilizadas \emph{Advisory Locks} ao invés de \emph{FOR UPDATE} no WED-SQL ? Por dois motivos: primeiramente
+pelo modo como o PostgreSQL funciona internamente e, em segundo lugar, pela natureza da operação de  transição de estados
+no contexto do WED-SQL. 
+\par O principal motivo para não utilizar travas do tipo \emph{FOR UPDATE} é que as informações sobre
+quais tuplas estão bloqueadas são armazenadas em disco, e não em memória RAM. Com isso, é necessário utilizar um plugin
+externo ao SGBD para recuperar tais informações, necessárias ao WED-server para realizar o controle do tempo de vida
+de cada transação. Por outro lado, as informações sobre \emph{Advisory Locks} podem ser obtidas facilmente, por meio de
+uma simples consulta a um catálogo interno do PostgreSQL. 
+\par Outro motivo para não se utilizar \emph{FOR UPDATE} no controle transacional, é que o registro que seria bloqueado
+não é o registro que será atualizado. As travas são obtidas na tabela Job\_Pool, porém as atualizações são executadas na
+tabela WED\_flow. Desse modo é mais simples, seguro e eficiente utilizar travas semanticas no WED-server.
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-\subsection{Controle transacional}
+\subsection{Escalabilidade e paralelismo}
 O PostgreSQL utiliza o modelo MVCC para manter a integridade dos dados. Isso significa que cada transação enxerga uma "foto"
 do banco de dados no momento em que a mesma inicia, garantindo seu isolamento. Nesse modelo de controle de concorrencia,
 travas de leitura não conflitam com travas de escrita de dados.
@@ -1023,7 +1028,7 @@ travas de leitura não conflitam com travas de escrita de dados.
 
 \section{Conclusão}
 Simplificar a utilização e a implementação de modelos de processos de negócio desenvolvidos com o paradigma WED-flow
-\blindtext
+%\blindtext
 
 
 
