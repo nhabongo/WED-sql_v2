@@ -933,10 +933,24 @@ tabela WED\_flow. Desse modo é mais simples, seguro e eficiente utilizar travas
 
 \subsection{Escalabilidade e paralelismo}
 O PostgreSQL utiliza o modelo MVCC para manter a integridade dos dados. Isso significa que cada transação enxerga uma "foto"
-do banco de dados no momento em que a mesma inicia, garantindo seu isolamento. Nesse modelo de controle de concorrencia,
-travas de leitura não conflitam com travas de escrita de dados.
-\par As transações podem ser executadas em três níveis de isolamento: Read commited, Repetable read e Serializable.
-%escalabilidade (horizontal, vertical, consistencia transacional, pg_shard)
+do banco de dados no momento em que a mesma inicia, garantindo seu isolamento uma vez que não há compartilhamento de dados
+parciais entre transações ativas. Nesse modelo de controle de concorrencia, travas de leitura não conflitam com travas de escrita.
+\par O padrão ISO/ANSI SQL define quatro níveis de isolamento transacional. Em ordem de restrição: \emph{
+Read Uncommited, Read Commited, Repeatable Read e Serializable}
+\par No nível menos restritivo,\emph{Read Uncommited}, uma transação enxerga modificações realizadas por outras transações
+concorrentes que ainda não finalizaram. Esse fenômeno é conhecido como \emph{dirty read}. No PostgreSQL, transações que executam
+nesse nível de isolamento são na verdade executadas no nível \emph{Read Commited), que é o nível mínimo de isolamento possivel
+na arquitetura MVCC. De qualquer modo, o padrão permite que um SGBD execute suas transações em um nível mais restritivo
+de isolamento do que o requisitado.
+\par Transações que executam no nível \emph{Read Commited} podem enxergar modificações realizadas por transações concorrentes
+que finalizem durante sua execução. Por exemplo, a leitura de uma mesma tupla duas ou mais vezes, dentro de uma mesma transação,
+pode retornar valores diferentes. Esse fenômeno é conhecido por \emph{nonrepeatable read}. Esse é o nível padrao do PostgreSQL.
+\par Ao contrário do nível anterior, no nível \emph{Repetable Read}, uma transação ativa não enxerga tuplas modificadas
+por outras transações que finalizem previamente. Em caso de conflito, apenas uma transação finaliza e as outras são abortadas.
+Ainda assim, é possível ocorrer um fenômeno chamado de \emph{phantom read}, no qual um conjunto de tuplas que satisfaça uma
+determinada condição difere em duas execuções da mesma consulta na mesma transação. No PostgreSQL esse fenômeno não ocorre.
+\par O último, e mais restritivo, nível de isolamento é o \emph{Serializable}. 
+%escalabilidade (horizontal, vertical, consistencia transacional, pg_shard) 
 
 % needed in second column of first page if using \IEEEpubid
 %\IEEEpubidadjcol
