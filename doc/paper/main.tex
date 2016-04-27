@@ -877,7 +877,7 @@ outros eventos nao detectáveis tanto pelo WED-server quanto pelos WED-workers.
 
 
 
-\subsection{Controle transacional e concorrência}
+\subsection{Controle transacional e de concorrência}
 %wed-trans, why lock ?, types of locks , why advisory(pg_row_locks)
 %locks are needed for: 1-keep track of wed-trans; 2-concurrency control between wed-workers (pg_locks, select for update nowait)
 
@@ -931,7 +931,7 @@ tabela WED\_flow. Desse modo é mais simples, seguro e eficiente utilizar travas
 
 
 
-\subsection{Escalabilidade e paralelismo}
+\subsection{Isolamento e paralelismo}
 O PostgreSQL utiliza o modelo MVCC para manter a integridade dos dados. Isso significa que cada transação enxerga uma "foto"
 do banco de dados no momento em que a mesma inicia, garantindo seu isolamento uma vez que não há compartilhamento de dados
 parciais entre transações ativas. Nesse modelo de controle de concorrencia, travas de leitura não conflitam com travas de escrita.
@@ -939,7 +939,7 @@ parciais entre transações ativas. Nesse modelo de controle de concorrencia, tr
 Read Uncommited, Read Commited, Repeatable Read e Serializable}
 \par No nível menos restritivo,\emph{Read Uncommited}, uma transação enxerga modificações realizadas por outras transações
 concorrentes que ainda não finalizaram. Esse fenômeno é conhecido como \emph{dirty read}. No PostgreSQL, transações que executam
-nesse nível de isolamento são na verdade executadas no nível \emph{Read Commited), que é o nível mínimo de isolamento possivel
+nesse nível de isolamento são na verdade executadas no nível \emph{Read Commited}, que é o nível mínimo de isolamento possivel
 na arquitetura MVCC. De qualquer modo, o padrão permite que um SGBD execute suas transações em um nível mais restritivo
 de isolamento do que o requisitado.
 \par Transações que executam no nível \emph{Read Commited} podem enxergar modificações realizadas por transações concorrentes
@@ -949,7 +949,31 @@ pode retornar valores diferentes. Esse fenômeno é conhecido por \emph{nonrepea
 por outras transações que finalizem previamente. Em caso de conflito, apenas uma transação finaliza e as outras são abortadas.
 Ainda assim, é possível ocorrer um fenômeno chamado de \emph{phantom read}, no qual um conjunto de tuplas que satisfaça uma
 determinada condição difere em duas execuções da mesma consulta na mesma transação. No PostgreSQL esse fenômeno não ocorre.
-\par O último, e mais restritivo, nível de isolamento é o \emph{Serializable}. 
+\par O último e mais restritivo nível de isolamento é o \emph{Serializable}. De acordo com o padrão, um conjunto de transações
+concorrentes executando nesse nível deve produzir o mesmo resultado da execução sequencial em alguma ordem. Sendo assim, nenhum
+dos fenômenos mencionados anteriormente ocorre. No PostgreSQL, esse nível de isolamento funciona exatamente como o \emph{Repeatable Read}
+a menos da introdução de um mecanismo para detectar anomalias que poderiam levar a um resultado não condizente com todas
+as possives execuções de um conjunto de transações em série.
+\par No WED-server, assim como no PostgreSQL, o nível padrão de isolamento transacional é o \emph{Read Commited}. Isso só
+é possível graças ao seu mecanismo de detecção de estados de dados que, valendo-se do modelo MVCC, gera uma nova versão das
+tabelas relevantes toda vez que uma transação modifica uma instância de um WED-flow. Sendo assim, no caso de duas transações 
+concorrentes, por exemplo, não é preciso que uma delas seja abortada, o que ocorreria em níveis mais restritos de isolamento.
+Caso uma transação aborte, o WED-server descarta as alterações realizadas. Transações que operam em instância distintas 
+são executadas totalmente em paralelo. Além disso, os WED-workers não exergarao as novas WED-transitions 
+disparadas até que transação que escreveu o novo estado de dados finalize com sucesso.
+\par WED-workers que trabalham simultaneamente na mesma instância executam em paralelo até o momento final, onde necessitam
+atualizar o estado de dados dessa instância. Nesse momento, a execução se dará de modo sequencial, uma vez que o PostreSQL
+irá conceder uma trava implicita para a tupla que será modificada. Vale notar que a atualização da instância deve ser a 
+ultima operação executada pelo WED-worker, limitando o tempo de espera à quantidade de transações pendentes multiplicada 
+pelo tempo de execução do comando SQL UPDATE. Caso contrário, a execução se dá em paralelo.
+   
+
+
+
+
+Para ilustrar, considere o seguinte exemplo: Seja um
+WED-flow com um único WED-state \emph{s1} e duas WED-transitions que executem concorrentemente \emph{ta} e \emph{tb} e 
+escrevem em \emph{s1} os valores \emph{va} e \emph{vb} respectivamente. Se \emph{ta} esc
 %escalabilidade (horizontal, vertical, consistencia transacional, pg_shard) 
 
 % needed in second column of first page if using \IEEEpubid
