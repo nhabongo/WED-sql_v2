@@ -822,13 +822,6 @@ entrada especial será adicionada a tabela job\_pool.
 \end{algorithmic}
 \end{algorithm}
 
-\begin{figure}[!t]
-\centering
-\includegraphics[width=2.5in]{wed-flow.png}
-\caption{Flow-chart}
-\label{fig_wf}
-\end{figure}
-
 \section{Gerenciamento transacional}
 Cada instância de um WED-flow pode ser vista como uma Transação Longa (LLT) e, de acordo com ~\cite{SGD87},
 suas WED-transitions podem ser vistas como passos Saga. Sendo assim, é função do WED-server garantir a integridade dos estados
@@ -857,7 +850,7 @@ de responder a eventos em tempo real.
 \par O SGBD PostgreSQL oferece um mecanismo que pode ser utilizado como uma alternativa ao modelo anterior: Notificações Assíncronas.
 Por meio do comando "NOTIFY <canal>,<payload>", o SGDB pode notificar de modo assíncrono um cliente que tenha se registrado, via comando "LISTEN <canal>", 
 em um canal de notificação específico. Além disso, também é possivel enviar uma mensagem ao cliente, por meio de "<payload>". Essa mensagem pode
-ser, por exemplo, uma cadeia de characteres no formato \emph{JSON}.
+ser, por exemplo, uma cadeia de characteres no formato \emph{JSON} que represente o estado de dados de uma instância de um WED-flow.
 \par A grande vantagem do modelo de Notificações Assíncronas sobre o modelo de Continuous Query é que o cliente recebe a notificação em tempo real
 da ocorrência do evento de dados, contanto que o mesmo esteja escutando no canal de notificação nesse momento. Além disso, devido ao fato de o cliente
 não precisar verificar a cada certo intervalo de tempo se há alguma nova mensagem, ele pode esperar pela notifição "dormindo", ou seja, sua execução
@@ -873,6 +866,8 @@ passo é procurar por WED-transitions pendentes de execução na tabela Job\_Poo
 WED-workers podem ainda ser configurados para "acordar" após um certo intervalo de tempo sem receber novas notificações e verificar por tarefas pendentes,
 uma vez que, em se tratando de um sistema potencialmente distribuido, é possível que mensagens possam se perder por falhas na rede de comunicaçao ou por
 outros eventos nao detectáveis tanto pelo WED-server quanto pelos WED-workers. 
+%Cabe ao projetista garantir que uma trnas nao dependa de atributos que nao foram definidos na cond
+\par 
 
 
 
@@ -965,15 +960,16 @@ disparadas até que transação que escreveu o novo estado de dados finalize com
 atualizar o estado de dados dessa instância. Nesse momento, a execução se dará de modo sequencial, uma vez que o PostreSQL
 irá conceder uma trava implicita para a tupla que será modificada. Vale notar que a atualização da instância deve ser a 
 ultima operação executada pelo WED-worker, limitando o tempo de espera à quantidade de transações pendentes multiplicada 
-pelo tempo de execução do comando SQL UPDATE. Caso contrário, a execução se dá em paralelo.
+pelo tempo de execução do comando SQL UPDATE. Caso contrário, a execução ocorre em paralelo (veja a figura~\ref{fig_wf}).
+\par payload ...
    
-
-
-
-
-Para ilustrar, considere o seguinte exemplo: Seja um
-WED-flow com um único WED-state \emph{s1} e duas WED-transitions que executem concorrentemente \emph{ta} e \emph{tb} e 
-escrevem em \emph{s1} os valores \emph{va} e \emph{vb} respectivamente. Se \emph{ta} esc
+\begin{figure}[!t]
+\centering
+\includegraphics[width=2.5in]{wed-flow2.png}
+\caption{Os WED-workers 1 e 2 trabalham na mesma instância e precisam sincronizar a atualização do WED-state na tabela
+WED-flow}
+\label{fig_wf}
+\end{figure}
 %escalabilidade (horizontal, vertical, consistencia transacional, pg_shard) 
 
 % needed in second column of first page if using \IEEEpubid
