@@ -425,7 +425,7 @@ de Petri e etc). No entanto, uma aplicação baseada no WED-flow precisa impleme
 abaixo para fazer o controle transacional baseado em estados de dados (WED-states), assim como fornecer suporte ao tratamento
 de exceções ou utilizar uma ferramenta como a WED-tool gerenciar esses mecanismos. A proposta da WED-SQL é fornecer um
 arcabouço WED-flow distribuído e de alto desempenho para simplificar tanto o desenvolvimento quanto a implementação de tais
-aplicações. Algumas vantagens da WED-SQL é que seu mecanismo de controle está integrado a um SGBD relacional e, com isso,
+aplicações. Uma caracteristica peculiar da WED-SQL é que seu mecanismo de controle está integrado a um SGBD relacional e, com isso,
 utiliza a linguagem SQL para a especificação das definições do WED-flow (WED-triggers, WED-transitions, WED-conditions, etc). 
 
 \end{abstract}
@@ -866,10 +866,15 @@ passo é procurar por WED-transitions pendentes de execução na tabela Job\_Poo
 WED-workers podem ainda ser configurados para "acordar" após um certo intervalo de tempo sem receber novas notificações e verificar por tarefas pendentes,
 uma vez que, em se tratando de um sistema potencialmente distribuido, é possível que mensagens possam se perder por falhas na rede de comunicaçao ou por
 outros eventos nao detectáveis tanto pelo WED-server quanto pelos WED-workers. 
-%Cabe ao projetista garantir que uma trnas nao dependa de atributos que nao foram definidos na cond
-\par 
-
-
+%Cabe ao projetista garantir que uma trnas nao dependa de atributos que nao foram definidos na cond (attr de interesse). Se a trnas foi disparada é pq a cond for satis. nivel de isolamento permite ...
+\par O WED-state recebido pelos WED-workers, seja por meio de notificação ou consultando a tabela Job\_Pool, não representa o estado atual da instância mas
+sim o estado de dados no momento em que a WED-transition foi disparada. Sendo assim, dado que a condição de disparo de uma WED-transition é conhecida,
+qual a razão de se enviar o estado de dados aos WED-workers ? Eficiência. No caso de WED-conditions definidas por uma conjunção de predicados, ou seja, 
+utilizando o operador lógico \emph{OR}, pode ser necessário verificar os valores dos WED-attributes que dispararam a WED-transtion associada. Enviar o estado
+de dados aos WED-workers elimina a necessidade de consultas à tabela WED-trace. É muito importante lembrar que, ao definir um WED-worker, não se deve 
+considerar atributos que não foram definidos na WED-condition, uma vez que, além de ser um erro de projeto do WED-flow, outras transações executando
+em paralelo podem alterá-los a qualquer momento. Cabe ao projetista do WED-flow garantir que uma WED-transition não dependa de WED-atributes que não
+foram definidos na WED-condition associada. 
 
 
 \subsection{Controle transacional e de concorrência}
@@ -961,7 +966,6 @@ atualizar o estado de dados dessa instância. Nesse momento, a execução se dar
 irá conceder uma trava implicita para a tupla que será modificada. Vale notar que a atualização da instância deve ser a 
 ultima operação executada pelo WED-worker, limitando o tempo de espera à quantidade de transações pendentes multiplicada 
 pelo tempo de execução do comando SQL UPDATE. Caso contrário, a execução ocorre em paralelo (veja a figura~\ref{fig_wf}).
-\par payload ...
    
 \begin{figure}[!t]
 \centering
@@ -1058,10 +1062,39 @@ WED-flow}
 % stfloats package.
 
 \section{Trabalhos Futuros}
-(linguagem, gerenciador de conecções, remocao de WED-attr, ...)
+%pgBouncer = breaks notify
+%wasting connections
+%pubsub (rabbitMQ, real event bus)
+%pg process size in memory (~9MB)
+%file descriptor per process
+(linguagem, gerenciador de conecções, ...)
+
+Na próxima fase desse projeto serão incorporadas duas funcionaliades essenciais para o sucesso do projeto WED-SQL: uma
+linguagem declarativa para expressar as operações nativas do WED-flow e um módulo específico para gerenciar as conecções
+com o WED-server.
+\par Quanto à linguagem, a ideia é criar uma extensao da SQL que encapsule as operações nativas do WED-flow e integrá-la
+ao interpretador do PostgreSQL, o qual será então responsável por traduzir e executar código SQL nativo e outras operações que,
+nesse momento, são realizadas por meio de um conjunto de \emph{shell scripts}. Por meio dessa abstração, será possível 
+deixar a sintaxe declarativa do WED-server mais próxima do modelo teórico, simplificando sua utilização.
+\par Em Linux, um processo pode criar um clone de si mesmo para executar uma porção específica de código de modo independente.
+O PostgreSQL, assim como muitos outros serviços que atendem à requisições externas, utiliza essa técnica sempre que 
+for estabelecida uma nova conecçao com uma aplicação cliente. Ao analisar a utilização de recursos do sistema operacional
+, é possível observar que cada novo sub-processo gerado ocupa cerca de 9MB de memória RAM. Como consequência, há um limite
+físico no número de conecções que podem ser estabelecidas simultaneamente. No caso do WED-SQL, cada WED-worker precisa 
+manter uma conecção ativa com o WED-server para receber as notificações
+assíncronas em tempo real, além de estabelecer uma segunda conecção para efetivamente executar a WED-transition. Sendo
+assim, para cada WED-worker ativo são criados dois sub-processos do PostgreSQL, o que acaba por consumir em média 18MB
+de RAM.
+\par As notificações assíncronas do PostgreSQL são baseadas em um modelo de comunicação conhecido por \emph{Publish-Subscribe},
+onde quem envia uma mensagem não esta ciente da existência de quem a recebe. Sendo assim, é possível utilizar uma especie
+de WED-worker específico que funcionaria com um detector de eventos em tempo real para receber e distribuir as mensagens
+para os demais WED-workers, o qual utilizaria uma única conecção com o WED-server, efetivamente dobrando a quantidade
+de WED-transitions simultâneas. Há diversas soluções prontas para implementar esse mecanismo, umas delas é o software 
+RabbitMQ.
+
 
 \section{Conclusão}
-Simplificar a utilização e a implementação de modelos de processos de negócio desenvolvidos com o paradigma WED-flow
+Simplificar a utilização e a implementação de modelos de processos de negócio desenvolvidos com o paradigma WED-flow.
 %\blindtext
 
 
@@ -1083,9 +1116,9 @@ Simplificar a utilização e a implementação de modelos de processos de negóc
 %
 
 
-\appendices
-\section{Apd }
-\blindtext
+%\appendices
+%\section{Apd }
+%\blindtext
 
 % use section* for acknowledgement
 \section*{Acknowledgment}

@@ -12,7 +12,7 @@ class MyWorker(BaseClass):
         super().__init__(MyWorker.trname,MyWorker.dbs,MyWorker.wakeup_interval)
         
     def wed_trans(self,payload):
-        time.sleep(3)
+        time.sleep(10)
         print (payload)
         return "a2=(a2::integer + 1)::text"
         
