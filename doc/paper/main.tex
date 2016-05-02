@@ -1094,12 +1094,23 @@ RabbitMQ.
 
 
 \section{Conclusão}
-Simplificar a utilização e a implementação de modelos de processos de negócio desenvolvidos com o paradigma WED-flow.
+
+Desde sua concepção em 2010~\cite{cool2010}, o paradigma WED-flow não parou de evoluir. Novos estudos, realizados antes
+e durante o desenvolvimento deste trabalho, mostram que embora a ferramenta WED-tool~\cite{marcela} implemente o WED-flow, 
+na prática ela ja não atende aos novos requisitos dessas novas aplicações. 
+\par A WED-SQL está sendo estratégicamente elaborada para suprir essa demanda. Sua integração ao SGBD garante que o controle
+de fluxo proposto pelo modelo seja executado com propriedades transacionais nativas, além de dispor do mais avançado aparato
+para o controle de concorrência assim como garatir a integridade dos dados com as propriedades ACID. A adoção do modelo 
+cliente servidor tem por objetivo viabilizar a sua implementação em ambientes distribuidos, uma vez que os WED-workers
+tipicamente serão implementados como \emph{Web Services} e multiplos WED-servers poderão ser utilizados simultaneamente,
+seja para manter a disponibilidade, quanto para balanceamento de carga. Ao utilizar uma linguagem declarativa própria 
+para a WED-SQL, é possível aproximar sua sintaxe da utilizada no modelo teórico, simplificando sua utilização, e eventualmente
+lançar uma versão especial do PostgreSQL otimizada para o WED-flow.
+\par Resumindo, trata se de uma ferramenta moderna, altamente escalável, construída em um ambiente transacional cujo
+principal objetivo é simplificar a utilização e a implementação de modelos de processos de negócio desenvolvidos com sob
+o paradigma WED-flow.
+
 %\blindtext
-
-
-
-
 
 % if have a single appendix:
 %\appendix[Proof of the Zonklar Equations]
