@@ -361,7 +361,7 @@
 %
 % paper title
 % can use linebreaks \\ within to get better formatting as desired
-\title{WED-SQL (Rascunho)}
+\title{WED-SQL (Draft)}
 
 
 % author names and affiliations
@@ -418,16 +418,15 @@ calton@cc.gatech.edu}}
 \begin{abstract}
 %\boldmath
 %\blindtext[1]
-Desenvolver e implementar um modelo de processo de negócios utilizando os conceitos do WED-flow resulta em um sistema de
-informação dinâmico, simplificando o desenvolvimento incremental e adaptativo, além de reduzir significativamente a
-complexidade no tratamento de exceções quando comparado aos arcabouços tradicionais (BPEL, álgebra de processos, Redes
-de Petri e etc). No entanto, uma aplicação baseada no WED-flow precisa implementar uma camada de software em um nível
-abaixo para fazer o controle transacional baseado em estados de dados (WED-states), assim como fornecer suporte ao tratamento
-de exceções ou utilizar uma ferramenta como a WED-tool gerenciar esses mecanismos. A proposta da WED-SQL é fornecer um
-arcabouço WED-flow distribuído e de alto desempenho para simplificar tanto o desenvolvimento quanto a implementação de tais
-aplicações. Uma característica peculiar da WED-SQL é que seu mecanismo de controle está integrado a um SGBD relacional, que
-além de usufruir de todo um aparato transacional utiliza a linguagem SQL para a especificação das definições do WED-flow 
-(WED-triggers, WED-transitions, WED-conditions, etc). 
+Business process models designed and implemented under WED-flow concepts are true dynamic systems, easy to evolve in a
+incremental and adaptative approach and drastically reducing the complexity of exceptions handling when compared to other
+more traditional frameworks (like BPEL, Process Algebra and Petri Networks). On the implementation side, however, these
+systems must either provide an extra software layer or use some external toolkit, or even a framework, to be able to enforce 
+a data-state based transaction control, what includes dealing with semantic exceptions. In this paper we present the 
+WED-SQL, a distributed framework that provides a reliable e efficient way to write and implement WED-flow applications.
+One of its main attributes is the integration with the PostgreSQL Relational Database Management System, wich enables
+the WED-SQL to take full advantage of all the transactional properties provided and also benefit from the SQL language
+to specify the WED-flow definitions (e.g. WED-conditions, WED-transitions, and so on). 
 
 \end{abstract}
 % IEEEtran.cls defaults to using nonbold math in the Abstract.
