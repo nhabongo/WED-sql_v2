@@ -348,7 +348,7 @@
 % (Unless specifically asked to do so by the journal or conference you plan
 % to submit to, of course. )
 
-\usepackage[brazilian]{babel}
+%\usepackage[brazilian]{babel}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{fancyvrb}
@@ -419,12 +419,12 @@ calton@cc.gatech.edu}}
 %\boldmath
 %\blindtext[1]
 Business process models designed and implemented under WED-flow concepts are true dynamic systems, easy to evolve in a
-incremental and adaptative approach and drastically reducing the complexity of exceptions handling when compared to other
+incremental and adaptive approach and drastically reducing the complexity of exceptions handling when compared to other
 more traditional frameworks (like BPEL, Process Algebra and Petri Networks). On the implementation side, however, these
 systems must either provide an extra software layer or use some external toolkit, or even a framework, to be able to enforce 
 a data-state based transaction control, what includes dealing with semantic exceptions. In this paper we present the 
 WED-SQL, a distributed framework that provides a reliable e efficient way to write and implement WED-flow applications.
-One of its main attributes is the integration with the PostgreSQL Relational Database Management System, wich enables
+One of its main attributes is the integration with the PostgreSQL Relational Database Management System, which enables
 the WED-SQL to take full advantage of all the transactional properties provided and also benefit from the SQL language
 to specify the WED-flow definitions (e.g. WED-conditions, WED-transitions, and so on). 
 
@@ -456,28 +456,28 @@ WED-flow, PostgreSQL, transações longas, ...
 % creates the second title. It will be ignored for other modes.
 \IEEEpeerreviewmaketitle
 
-\section{Introducão}
+\section{Introduction}
 
-  Sistemas computacionais contemporâneos para o gerenciamento de processos de negócio estão sujeitos a constantes 
-modificações estruturais, ocasionadas tanto por exceções não previstas na fase de modelagem quanto para atender a novos 
-requisitos. Ao longo do tempo, essas modificações tendem a deteriorar a qualidade do código de tais sistemas, aumentando 
-exponencialmente seu custo de manutenção além de, eventualmente, comprometer seu desempenho.
+Most of modern business process management software systems are subject to recurrent structural modifications during its
+life cycle. This changes are necessary to incorporate new requisites to the software, once it is often impossible 
+to come up with all requirements upfront in the modeling phase of project - some of then only appear after the software
+is running in production. Furthermore, it is too expensive and time consuming to try to predict all the possibles situations 
+and its outcomes, which ultimately may raise exceptions that must be dealt with. Over time, these modifications leads
+to code deterioration, exponentially increasing the maintenance costs and compromising the quality of the system as well 
+negatively impacting its overall performance.
 \\
-\indent  Os modelos clássicos para especificação de processos de negócios, dentre eles o WS-BPEL, álgebra de processos e redes
-de petri, procuram capturar interações, relações e o comportamento entre processos, muitas vezes negligenciando a importância
-dos dados no projeto. Nenhuma dessas ferramentas, no entanto, é exatamente adequada para modelar processos que necessitam
-ser modificados frequentemente, o que implica em aumento exponencial no custo e na complexidade do projeto.
+\indent  Classic business process specification models, for example WS-BPEL, Process Algebra and Petri Networks, focus primarily
+on behavioral interactions and relations between process, pushing data analysis into the background and overlooking its
+relevance for the project. Therefore, none of these models exactly fits the needs of design dynamic business process 
+management systems, which may result in costly system adaptations and maintenance.
 \\
-\indent  O modelo WED-flow\cite{FTPM10}, como uma alternativa aos modelos clássicos, captura não só a dinâmica da interação entre processos
-como também, com igual importância, os dados gerados e os eventos que implicam em alterações desses dados.
-Com isso, o WED-flow é capaz de construir um workflow de estados de dados com suas respectivas condições de transição 
-entre os mesmos. E assim, agregando propriedades de recuperação transacional a esse workflow, prover mecanismos para o 
-tratamento de exceções em tempo real.
-\\
-\indent  Ao utilizar a abordagem WED-flow, modificações nos processos de negócio são traduzidas em novos
-estados de dados. Novas regras, ou novos processos, se traduzem em condições para se atingir um determinado estado de 
-dados. Essa versatilidade permite capturar a natureza de processos verdadeiramente dinâmicos, simplificando a evolução 
-incremental tanto do modelo de negócio quanto do software que o implemente.
+\indent  The WED-flow approach, in contrast with the classical models, capture both the inter-process relations and, with the very
+same relevance, the data generated by their interactions. With this in mind, the WED-flow allows systems architects to 
+think in terms of data states and transitions, similarly to a finite automata designing. Combined with transactional
+recovery properties, a framework that implements WED-flow can easily provide real time exception handling mechanisms.
+Furthermore, modifying or adding new business rules to the project, which is often translated in creation of new processes, is a simple
+matter of defining new data states and conditions for transitions, thus capturing the true nature of dynamic processes
+and simplifying an incremental evolution of the whole project.
 \\
 %problemas da implementacao e justificativa do WED-SQL
 %tolerancia a falhas
