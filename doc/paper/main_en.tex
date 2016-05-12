@@ -500,17 +500,30 @@ for external communication is given in section V. Finally, on section VI, we dis
 expand this framework capabilities.  
   
 
-\section{WED-SQL: Visão geral e arquitetura}
-%\blindtext
-/* Incluir um resumo das definições do WED-flow ? */\\
-Com o objetivo de permitir sua utilização em um ambiente distribuído, por exemplo por meio de web-services, e também para dar
-amplo suporte ao tratamento de transações longas~\cite{MOLINA}, o WED-SQL foi construído utilizando a arquitetura de 
-software \emph{Cliente-Servidor}. 
+\section{WED-SQL: general view and architecture}
 
-\par A componente servidor, que recebe o nome de WED-server, é responsável por fazer o controle transacional de acordo com 
-as WED-conditions definidas para um determinado WED-flow, verificando os WED-states e disparando as WED-triggers conforme 
-necessário. Já a componente cliente, denominada WED-worker (quem sabe até WED-service ?), é quem efetivamente faz a computação
-necessárias para executar as WED-transitions.
+To better understand what the WED-SQL does, first one needs to understand the basic definitions of the WED-flow paradigm. 
+A WED-flow application is composed of a set of WED-attributes $\mathcal{A} = \{a_1,a_2,a_3,\ldots,a_n\}$, a set of WED-states
+$\mathcal{S} = \{s_1,s_2,s_3,\ldots,s_m\}$ where $ \forall s_i \in \mathcal{S}, s_i = (v_1,v_2,v_3,\ldots,v_n)$
+is a n-tuple where each $i\in[1,n], v_i$ is a value for $a_i \in \mathcal{A}$ and the size of $s_i = |\mathcal{A}|$, a set of
+WED-conditions $\mathcal{C}$, a set of WED-transitions $\mathcal{T}$ and a set of WED-triggers $\mathcal{G}$. A WED-condition
+$c \in \mathcal{C}$ is a predicate over $\mathcal{S}$, that is, we say that $s \in \mathcal{S}$ satisfies $c$ if the values
+of $s$ makes $c$ true. A WED-transition is a function $t: \mathcal{S}\rightarrow\mathcal{S} \in \mathcal{T}$ that receives 
+as input a WED-state $s$ and returns another WED-state $s'$. Finally, a WED-trigger $g = (c,t)$ where $g \in \mathcal{G},
+c \in \mathcal{C}, t \in \mathcal{T}$ is a 2-tuple that associates a WED-condition $c$ with a WED-transition $t$. Therefore,
+an instance of a WED-flow application stars with a initial WED-state $s$ that should match some WED-condition $c$ to fire
+the WED-trigger $g$ that, in turn, will initiate a WED-transition $t$ generating the next WED-state. This keeps going 
+until a final WED-state is reached, when this instance is then finalized. Roughly speaking, a WED-flow application is a 
+transactional data state transitioning machine.
+\\
+\indent
+Aiming to be capable of running in a distributed environment, for instance in a web-services composition way, as well
+to broadly support Long Lived Transaction handling, the WED-SQL is based on a Client-Server system architecture and has
+two main component thereafter: a server component called WED-server and a client component called WED-worker. The
+sever side is responsible for both transactional and flow control, what means that besides coordinating the WED-transitions, 
+enforcing individually defined completion time limits, it is also in charge of matching WED-states against WED-conditions 
+and WED-trigger firing. On the other hand, the client side is responsible for doing the computation needed to perform each
+WED-transition. 
 \\
 \subsection{WED-worker e WED-server}
 O WED-server é, basicamente, uma extensão para o SGBD (Sistema Gerenciador de Banco de Dados) PostgreSQL~\cite{PSQL} composta de 
