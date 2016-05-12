@@ -438,7 +438,7 @@ to specify the WED-flow definitions (e.g. WED-conditions, WED-transitions, and s
 
 % Note that keywords are not normally used for peerreview papers.
 \begin{IEEEkeywords}
-WED-flow, PostgreSQL, transações longas, ...
+WED-flow, Business Process Management, Long Lived Transactions, PostgreSQL, Client-Server Architecture, Distributed Systems
 \end{IEEEkeywords}
 
 
@@ -487,17 +487,17 @@ the control structure, what includes the transactional control, exceptions handl
 and ensure data integrity. This framework effectively is an abstraction layer that allow developers to put more effort
 on business logic and come up with better WED-flow projects, also making better use of reusable code. 
 \\
-\indent O WED-SQL foi construído dentro de um SGBD relacional e com isso utiliza a linguagem SQL para definir propriedades
-e controles de fluxo de um modelo WED-flow, além de contar com um robusto aparato transacional e ser altamente tolerante
-a falhas. Por utilizar como base tecnologias consolidadas e amplamente difundidas no universo da computação, o WED-SQL visa 
-disseminar a adoção do paradigma WED-flow na modelagem de processos de negócio , fornecendo uma ferramenta confiável, facilmente
-escalável, simples de ser utilizada e que permita a flexibilidade exigida na especificação de controle de fluxo dos processos
-de negócio modernos.
+\indent The WED-SQL framework has been built inside the PostgreSQL relational database management system, thereby uses SQL language
+to specify WED-flow elements, has full transactional support and it is highly fault tolerant. Once it employs well consolidate 
+technologies, widespread in the computer science field, this framework targets to disseminate the adoption of WED-flow on
+business process management software design, by means of an easy to use, reliable and scalable tool that is capable to 
+provide the flexibility demanded by modern transaction control systems. 
 \\
-\indent O restante desse artigo segue a seguinte estrutura: Na sessão II são apresentados aspectos da arquitetura de software 
-e das estruturas de dados internas. A sessão III descreve sucintamente o funcionamento do sistema. A sessão IV descreve
-os algoritmos envolvidos. Na sessão V são discutidos em detalhes o gerenciamento de transações e o protocolo de comunicação.
-Finalmente, na sessão VI, são apresentados os próximos desafios para expandir as funcionalidades dessa ferramenta. 
+\indent The remaining of this paper is structured as follows: Section II presents WED-SQL general software architecture aspects and
+internal data structures. Section III briefly describes how the system works. A discussion about the algorithms involved
+is presented in section IV. Following, a detailed description of transactional control and the communication protocol used
+for external communication is given in section V. Finally, on section VI, we discuss the next challenges to improve and
+expand this framework capabilities.  
   
 
 \section{WED-SQL: Visão geral e arquitetura}
