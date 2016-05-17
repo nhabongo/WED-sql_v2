@@ -487,7 +487,7 @@ the control structure, what includes the transactional control, exceptions handl
 and ensure data integrity. This framework effectively is an abstraction layer that allow developers to put more effort
 on business logic and come up with better WED-flow projects, also making better use of reusable code. 
 \\
-\indent The WED-SQL framework has been built inside the PostgreSQL relational database management system, thereby uses SQL language
+\indent The WED-SQL framework has been built inside the PostgreSQL~\cite{PSQL} relational database management system, thereby uses SQL language
 to specify WED-flow elements, has full transactional support and it is highly fault tolerant. Once it employs well consolidate 
 technologies, widespread in the computer science field, this framework targets to disseminate the adoption of WED-flow on
 business process management software design, by means of an easy to use, reliable and scalable tool that is capable to 
@@ -512,9 +512,9 @@ of $s$ makes $c$ true. A WED-transition is a function $t: \mathcal{S}\rightarrow
 as input a WED-state $s$ and returns another WED-state $s'$. Finally, a WED-trigger $g = (c,t)$ where $g \in \mathcal{G},
 c \in \mathcal{C}, t \in \mathcal{T}$ is a 2-tuple that associates a WED-condition $c$ with a WED-transition $t$. Therefore,
 an instance of a WED-flow application stars with a initial WED-state $s$ that should match some WED-condition $c$ to fire
-the WED-trigger $g$ that, in turn, will initiate a WED-transition $t$ generating the next WED-state. This keeps going 
-until a final WED-state is reached, when this instance is then finalized. Roughly speaking, a WED-flow application is a 
-transactional data state transitioning machine.
+the WED-trigger $g$ that, in turn, will initiate a WED-transition $t$, which must complete by some predefined timeout,thus 
+generating the next WED-state. This keeps going until a final WED-state is reached, when this instance is then finalized. 
+Roughly speaking, a WED-flow application is a transactional data state transitioning machine.
 \\
 \indent
 Aiming to be capable of running in a distributed environment, for instance in a web-services composition way, as well
@@ -525,25 +525,34 @@ enforcing individually defined completion time limits, it is also in charge of m
 and WED-trigger firing. On the other hand, the client side is responsible for doing the computation needed to perform each
 WED-transition. 
 \\
-\subsection{WED-worker e WED-server}
-O WED-server é, basicamente, uma extensão para o SGBD (Sistema Gerenciador de Banco de Dados) PostgreSQL~\cite{PSQL} composta de 
-\emph{triggers}, tabelas de controle e \emph{stored procedures}~\cite{NAV}. A escolha do Postgresql como base do WED-server 
-se deu por diversos motivos, dentre eles: ser de código aberto, implementação modular baseada em catálogs (\emph{system catalog driven}), 
-facilidade de estender suas funcionalidades por meio de módulos escritos nas linguagens C, Python e SQL.
+\subsection{WED-worker and WED-server}
+Fundamentally, the WED-server is a PostgreSQL extension package consisting of \emph{database triggers}, control tables and 
+stored procedures~\cite{NAV}. Choosing PostgreSQL as the WED-server foundation was a decision based on several of its
+aspects, such as be an open source project, catalog-driven operation, support for user-written code using low and high level 
+programming languages (e.g., C, Python, Perl, TCL and SQL itself).
 \\
-\indent Por ser de código aberto, a licença do Postgresql garante que o mesmo possa ser modificado e redistribuído, o que permite
-que o WED-SQL possa ser distribuído sem grandes empecilhos. Além disso, o acesso ao código fonte possibilita uma melhor compreensão
-de seus mecanismos internos, garantido uma implementação mais robusta e eficiente do paradigma WED-flow. 
+\indent  WED-SQL directly benefits from the fact that, being an Open-source software, PostgreSQL's license states that it can be used, 
+modified, copied and distributed without any kind of payment or agreement. Besides that, having access to the source code
+makes development less complex and error prone once it is easier to analyze and, consequently, better comprehend its internal
+mechanisms. 
 \\
-\indent O PostgreSQL armazena seus dados de controle em tabelas especiais denominadas catálogos de sistema. Esses catálogos, 
-que são facilmente acessados com as devidas permissões, expõe aos usuários informações vitais para estender suas funcionalidades
-por meio da criação de módulos que podem ser carregados tanto de modo dinâmico, ou seja, com o SGBD executando ou de modo
-estático, durante a inicialização. Dados de transações podem ser facilmente obtidos por meio desses 
-catálogos de sistema, o que é particularmente útil no caso do WED-server. 
+\indent Relational database systems needs to store metadata about internal structure of tables, columns, indexes, etc. This data
+is kept on what is know as system catalogs. PostgreSQL not only stores much of its control data in these catalogs
+but also base its procedures on then, in what is called a catalog-driven operation. Since they are readily  
+available to users as ordinary tables, thus can be modified, it is fairly easy to modify the PostgreSQL behavior. This
+property is specially useful to allow the WED-server to manage timed transactions related to WED-transitions and exception 
+handling. 
 \\
-\indent Devido à natureza dinâmica do paradigma WED-flow, a utilização de uma linguagem de programação de alto nível, como Python, 
-é fundamental para que toda a sua expressividade seja implementada de forma plena. Do ponto de vista de implementação, 
-o WED-server é composto de módulos escritos em Python, SQL e C, além de aproveitar o arcabouço transacional clássico (propriedades ACID, controle de concorrência e etc) fornecido pelo PostgreSQL.
+\indent As previously mentioned, users can write PostgreSQL modules using a few different languages. The most simple and straight
+forward of then is a SQL dialect called pgSQL, that is basically SQL with variables and control structures. Also, modules
+can be written in C language and loaded as a dynamic library, providing the user with ultimate logic control and performance.
+Despite these two language having native support in PostgreSQL, sometimes pgSQL is not expressive enough when the logic
+involved is too complex, while C, albeit fast, is too low level and overloaded with technical implementation details too
+perform most of the tasks. The very PostgreSQL documentation recommends using a language other than C unless it is explicit
+needed. Fortunately, it also offers support for Python, a much more versatile and expressive programming language than
+the two former. Given the dynamic nature of WED-flow models, Python has been proven the perfect tool to do most of the job
+on the WED-server side, only recurring to C when critical or where an extra performance is absolutely necessary. And,of
+course, SQL statements are every where in both WED-server and WED-workers. 
 \\
 \indent Já o WED-worker tem a função de conectar-se ao WED-server para efetuar as WED-transitions. Cada WED-transition é 
 associada a um ou mais WED-workers, dependendo da demanda de trabalho gerada pelo WED-server, e cada WED-worker é especializado
