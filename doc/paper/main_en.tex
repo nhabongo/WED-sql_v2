@@ -487,7 +487,8 @@ the control structure, what includes the transactional control, exceptions handl
 and ensure data integrity. This framework effectively is an abstraction layer that allow developers to put more effort
 on business logic and come up with better WED-flow projects, also making better use of reusable code. 
 \\
-\indent The WED-SQL framework has been built inside the PostgreSQL~\cite{PSQL} relational database management system, thereby uses SQL language
+\indent The WED-SQL framework has been built inside the PostgreSQL~\cite{PSQL} relational database management system (PostgreSQL RDBMS)
+, thereby uses SQL language
 to specify WED-flow elements, has full transactional support and it is highly fault tolerant. Once it employs well consolidate 
 technologies, widespread in the computer science field, this framework targets to disseminate the adoption of WED-flow on
 business process management software design, by means of an easy to use, reliable and scalable tool that is capable to 
@@ -544,7 +545,7 @@ property is specially useful to allow the WED-server to manage timed transaction
 handling. 
 \\
 \indent As previously mentioned, users can write PostgreSQL modules using a few different languages. The most simple and straight
-forward of then is a SQL dialect called pgSQL, that is basically SQL with variables and control structures. Also, modules
+forward of then is a SQL dialect called pgSQL, which is basically SQL with variables and flow control structures. Also, modules
 can be written in C language and loaded as a dynamic library, providing the user with ultimate logic control and performance.
 Despite these two language having native support in PostgreSQL, sometimes pgSQL is not expressive enough when the logic
 involved is too complex, while C, albeit fast, is too low level and overloaded with technical implementation details too
@@ -554,31 +555,86 @@ the two former. Given the dynamic nature of WED-flow models, Python has been pro
 on the WED-server side, only recurring to C when critical or where an extra performance is absolutely necessary. And,of
 course, SQL statements are every where in both WED-server and WED-workers. 
 \\
-\indent Já o WED-worker tem a função de conectar-se ao WED-server para efetuar as WED-transitions. Cada WED-transition é 
-associada a um ou mais WED-workers, dependendo da demanda de trabalho gerada pelo WED-server, e cada WED-worker é especializado
-em realizar uma WED-transition específica. A quantidade máxima de WED-workers trabalhando simultaneamente é limitada
-apenas pela quantidade de conecções que um dado WED-server é capaz de manter abertas.
+\indent The role of the WED-workers is to perform the WED-transitions. They must connect to the WED-server and "ask" for a pending
+job before opening a new transaction. All WED-transitions are encapsulated in a single transaction with a time limit to 
+complete, otherwise they are automatically aborted by the WED-server. Each WED-transition must have at least one WED-worker
+associated and, depending on the workload on the server side, can have many more. On the other hand, each WED-worker is 
+specialized in execute a specific WED-transition. The maximum number of WED-workers simultaneously transacting depends 
+on the number of concurrent connections that the WED-server is able to keep alive.
 
-\subsection{Estrutura de dados}
+\subsection{Data Model}
 
 \begin{figure}[!t]
 \centering
 \includegraphics[width=2.5in]{ER.png}
-\caption{Diagrama ER do WED-server}
+\caption{Approximate WED-server's Entity-Relationship model}
 \label{fig_er}
 
 \end{figure}
- O diagrama Entidade-Relacionamento na figura~\ref{fig_er} representa o modelo de dados gerenciado internamente pelo 
-WED-server. Vale notar que, devido a flexibilidade de modificação da estrutura de dados exigida para representar os WED-states, 
-não é possível capturar todos os aspectos do paradigma WED-flow por meio de um diagrama Entidade-Relacionamento clássico. Por exemplo,
-o relacionamento entre as entidades WED\_attr e WED\_flow é gerenciado pelo WED-server, ou seja, não há chaves indicando
-a relação entre essas duas entidades. A principal razão disso é pertimir adicionar ou remover WED-attributes em tempo de execução, 
-o que demanda modificações em tempo de execução na estrutura de dados.
+ The diagram depicted on figure* represents the data model used by the WED-server. It is not a true Entity-Relationship 
+model once the relation between the \emph{WED\_attr} and \emph{WED\_flow} (represented by the arrow in the diagram) is 
+managed by a stored procedure rather than by the RDBMS. This is necessary to comply with the dynamic nature of the WED-flow 
+approach, which allows the system designer to evolve the system on-the-fly, for instance, including new WED-attributes and 
+WED-conditions. In that case, the system's data structure may need to be modified accordingly. 
 \\
-\indent Do relacionamento entre as entidades WED\_flow e WED\_trig resultam a entidade fraca Job\_Pool, que contém as WED-transitions
-a serem executadas, e a entidade fraca WED\_trace, que contém os registros de execução de cada instância dos WED-flows.
+\indent WED-attributes are represented by the entity \emph{WED\_attr} using the following attributes:
+\begin{itemize}
+\item $aname$: Name of the WED-attribute and also the primary key;
+\item $adv$: Default value for this WED-attribute.
+\end{itemize}
 
-\subsection{Tabelas de controle}
+The \emph{WED\_flow} entity represents the instances of a WED-flow applications. Besides the identifying attribute (\emph{wid}),
+it has a extra one for each WED-attribute defined for a given application, in other words, for each element of \emph{WED\_attr}
+there is an attribute $aname$ in \emph{WED\_flow}.
+\\
+\indent The weak entities \emph{Job\_Pool} and \emph{WED\_trace} results from the relation between the entities \emph{WED\_flow} and 
+\emph{WED\_trig}. Identified by the ternary relationship \emph{Match}, \emph{Job\_Pool} represents pending WED-transitions, that is,
+the ones awaiting to be processed by a WED-worker, using the following attributes:
+
+\begin{itemize}
+\item $wid$: Foreign key that identifies a WED-flow instance;
+\item $tgid$: Foreign key that identifies which WED-trigger fired this WED-transition;
+\item $trname$: Name of the WED-transition to be performed;
+\item $lckid$: Optional parameter used by WED-workers to be able to identify themselves. May be used for authentication
+               purposes in the future  
+\item $timeout$: References the same name attribute of entity \emph{WED\_trig}. It is the transaction time limit defined for this WED-transition.  
+\item $payload$: Represents the WED-state that matched the WED-condition associated with this WED-transition. 
+\end{itemize}
+
+Identified by the ternary relationship \emph{Register}, \emph{WED\_trace} represents the history of execution for all WED-flow
+instances in a WED-server. Its attributes are :
+
+\begin{itemize}  
+\item $wid$: Foreign key that identifies a WED-flow instance;
+\item $state$: WED-state that fired the WED-transitions represented by the multivalued attribute \emph{trf};  
+\item $trf$: WED-transitions fired by the WED-state in \emph{state} attribute;
+\item $trw$: WED-transition that committed the respective WED-state in \emph{state}. A null value indicates a initial WED-state for
+             the given WED-flow instance;
+\item $status$: Labels \emph{state} accordingly to its status: "F" for a final WED-state, "E" to indicate that an exception has occurred
+               and "R" meaning a regular WED-state;
+\item $tstmp$: The exact moment when this record was created. Can be used to retrieve the execution history of a WED-flow instance
+              in chronological order. 
+\end{itemize}
+
+Finally, the \emph{WED\_trig} entity represents the WED-triggers, that is, the associations of WED-conditions with WED-transitions,
+using the following attributes:
+
+\begin{itemize}
+\item $tgid$: o identificador único de uma WED-trigger;
+\item $tgname$: atributo opcional utilizado para dar um nome à WED-trigger;
+\item $enabled$: permite que a WED-trigger seja desativada;
+\item $trname$: identificador único da WED-transition associada.
+\item $cname$: atributo opcional que pode ser utilizado para dar um nome à WED-condition associada;
+\item $cpred$: predicado da WED-condition associada. Aceita qualquer predicado valido na claúsula \emph{WHERE} em SQL;
+\item $cfinal$: utilizado para indicar qual é a condição final. Embora apenas uma WED-condition possa ser marcada como final,
+           o operado lógico \emph{OU} pode ser utilizado em seu predicado para definir-se multiplos WED-states finais.
+\item $timeout$: tempo limite para que um WED-worker finalize a WED-transition representada por "trname".
+
+\end{itemize}
+
+
+
+
 
 O WED-server utiliza cinco tabelas para definir regras, propriedades e controlar o fluxo de execução dos WED-flows: WED\_attr,
 WED\_flow, WED\_trace, WED\_trig e Job\_pool.
@@ -604,31 +660,7 @@ WED-transition. Possui os seguintes atributos:
 
 \end{itemize}
 
-O histórico de execução das WED-transition fica armazenado na tabela WED\_trace, que possui os seguintes atributos:
-\begin{itemize}  
-\item $wid$: referência ao identificador da instância do WED-flow;
-\item $state$: WED-state que disparou as WED-transitions listadas em "trf";
-\item $trf$: lista de WED-transitions disparadas pelo WED-state em "state";
-\item $trw$: WED-transition que gravou o WED-state representado por "state". Um valor nulo indica que esse registro representa o WED-state inicial;
-\item $status$: indica o tipo do WED-state representado em "state". Os possíveis valores são "F","E" ou "R" que indicam que o WED-state
-           é final, exceção ou regular, respectivamente.
-\item $tstmp$: indica o momento em que ocorreu o registro. Pode se recuperar a história de execução de uma instância ordenando-se
-          as entradas nessa tabela por essa coluna.
-\end{itemize}
-  A tabela Job\_Pool contém entradas referentes as WED-transitions pendentes que precisam ser executadas pelos WED-workers.
-Seus atributos são:
-\begin{itemize}  
-\item $wid$: referência ao identificador da instancia do WED-flow;
-\item $tgid$: referência à WED-trigger que disparou a WED-transition "trname";
-\item $trname$: nome da WED-transition a ser executada;
-\item $lckid$: parâmetro opcional que pode ser utilizado pelos WED-workers para se identificarem. Futuramente, poderá ser utilizado
-          para fins de autenticação e validação dos WED-workers;
-\item $timeout$: tempo limite para a execução da WED-transition (tempo limite da transação). É uma cópia da coluna de mesmo
-            nome da tabela WED\_trig;
-\item $payload$: WED-state que disparou a referida WED-transition. Pode ser utilizado, por exemplo, por
-            WED-workers que executam WED-transitions associadas a WED-conditions que possuem o operador lógico "OR" em 
-            seu predicado.
-\end{itemize}
+
   Finalmente, a tabela WED\_flow é o ponto de entrada para inicializar-se uma nova instância. Essa tabela é criada dinâmicamente
 de acordo com os WED-attributes definidos na tabela WED\_attr. Cada entrada em WED\_attr corresponde a uma coluna em WED\_flow.
 Suas entradas são o WED-state atual de cada instância, ou seja, são tuplas formadas por um identificador, representado
