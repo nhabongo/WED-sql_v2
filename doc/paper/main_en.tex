@@ -196,7 +196,7 @@
 %
 \usepackage{algorithmic}
 \usepackage{algorithm}
-\floatname{algorithm}{Algoritmo}
+%\floatname{algorithm}{Algoritmo}
 \renewcommand{\algorithmicrequire}{\textbf{Input:}}
 \renewcommand{\algorithmicensure}{\textbf{Output:}}
 % algorithmic.sty was written by Peter Williams and Rogerio Brito.
@@ -725,7 +725,6 @@ except KeyboardInterrupt:
 \caption{Standard WED-worker implementation in Python}
 \label{fig_ww}
 \end{figure}
-
 The first step to write a WED-worker using the BaseWorker package is to import the module \emph{BaseClass}, which in fact
 is an abstract class that implements the communication protocol with the WED-server as well as manages all connections
 and transactions involved.  
@@ -747,44 +746,44 @@ transaction.
 \\
 \indent Finally, the concrete class can be instantiated and executed by invoking its \emph{run()} method.
 
-\section{Algoritmos}
-Após definir e carregar um WED-flow em uma base de dados do WED-server e inicializar seus respectivos WED-workers, uma
-nova instância é inicializada inserindo-se um WED-state na tabela WED\_flow. Essa nova instância receberá um identificador
-único que será utilizado tanto para o registro de sua história de execução, na tabela WED\_trace, quanto para o controle
-transacional das WED-transitions. Se os valores padrão definidos para os WED-attributes, por meio da coluna "adv", na 
-tabela WED\_attr forem os valores de um WED-state inicial, basta executar o comando abaixo para se inicializar uma nova
-instância:
+\section{Algorithms}
+
+After a WED-flow application is defined, loaded into the WED-server and the WED-workers are initialized and ready to run,
+new instances are created by inserting a WED-state into the WED\_flow table. The WED-server will assign to a new instance 
+a WED-flow unique identifier (wid), which in turn will be used to both track its execution history as well as for transaction
+management purposes. If the default values set for the WED-attributes, in the WED\_attr table, happens to match the ones
+of a initial WED-state, then a new instance can be created by simply running the following SQL statement on the WED-server:
+
 \begin{Verbatim}[fontsize=\small]
 
      INSERT INTO wed_flow DEFAULT VALUES;
 \end{Verbatim}
-  Para cada nova instância inserida na tabela wed\_flow, o WED-server irá comparar os predicados das WED-conditions definidos
-na tabela wed\_trig com o WED-state representado na nova instância. Para cada condição satisfeita a respectiva WED-transition
-será disparada na forma de uma entrada na tabela job\_pool e uma notificação será enviada ao WED-worker responsável
-por executá-la. Além disso, serão adicionadas novas entradas na tabela wed\_trace registrando os eventos ocorridos. O WED-server
-ficará então aguardando até que uma nova instância ou uma WED-transition seja iniciada. Vale notar que WED-states iniciais 
-que não sejam finais e que não disparem ao menos uma WED-transition serão rejeitados pelo WED-server.
+
+When a new instance is initiated or when a WED-worker successfully commits a new WED-state, the WED-server henceforth runs 
+its main algorithm (Alg.~\ref{alg1}). It starts by evaluating all WED-conditions predicates against the new WED-state. Then, for
+each satisfied predicate, the WED-transition associated with this WED-condition will be fired and registered on the Job\_Pool table
+,a notification will also be sent to the respective WED-worker. Besides that, this events will be added to the instance's
+tracing record on the WED\_trace table. If a WED-state satisfies the final condition and if there is no pending WED-transitions,
+either running or awaiting in the Job\_Pool table, for a given instance, it is then marked as final and cannot be further
+modified. In the case when there is no pending WED-transitions and the new WED-state is not final, the instance will be
+marked as an exception and a special record will be inserted into Job\_Pool to signal some external recovery mechanism~\cite{ICWS12}.
+It is worth mentioning that unless a initial WED-state is also final, it must fire 
+at least one WED-transition, otherwise the WED-server will reject the new instance. 
 \\
-\indent  Para iniciar uma WED-transition, os WED-workers podem atuar de dois modos distintos: imediatamente ao receber 
-uma notificação do WED-server, ou quando o limite de tempo de espera por notificações termina (atributo wakeup\_interval) 
-, nesse caso será feita uma consulta à tabela job\_pool em busca de WED-transitions pendentes. Independentemente do modo 
-de atuação e antes de inicializar a transação, cada WED-worker precisa notificar o WED-server qual WED-transition e em qual 
-instância do WED-flow será executada a transação. Essa notificação é feita requisitando-se uma trava especial chamada 
-\emph{Advisory Lock}, que será discutida em detalhes na sesão V.
-Essa trava é necessária tanto para avisar a outros WED-workers que estejam trabalhando na mesma WED-transition que não a 
-executem para a mesma instância, quanto para que o WED-server possa controlar o tempo limite da execução de cada WED-transition. 
-Não é possivel executar uma WED-transition sem que o respectivo WED-worker consiga obter essa trava previamente.
+\indent  WED-workers spend most of their idle time suspended, waiting for a notification send by the WED-server when there is work 
+to be done. After some time waiting, if not notification has arrived they wake up and ask the WED-server for work (this
+behavior will be explained in section~\ref{not}). Either way, before initiate a WED-transition, the WED-worker need to 
+"inform" the WED-server of in which instance and what WED-transition it is about to perform. This is done by requesting the
+WED-server a special lock. If this lock is granted, then the WED-worker can proceed (See alg.~\ref{alg2})
 \\
-\indent De posse da referida trava, um WED-worker terá que finalizar a transação dentro do tempo limite de execução da WED-transition.
-Essa transação é finalizada atualizando-se o WED-state atual da instância em que está sendo executada a WED-transition por meio
-de um \emph{UPDATE} na tabela wed\_flow com o valor retornado pelo método wed\_trans().
+\indent This lock system is necessary once more than one WED-worker can be simultaneously activated for the same WED-transition.
+Therefore, its main role is to avoid the same WED-transition from being performed for the same WED-flow instance at the
+same time. Furthermore, it also helps the WED-server to manage transactions. It is wise to assume that no WED-transition
+can be committed by a WED-worker not holding a lock.
 \\
-\indent Quando uma instância é atualizada, o WED-server novamente irá verificar se esse novo WED-state dispara novas WED-transitions
-e, em caso afirmativo, irá registrá-las na tabela job\_pool, além de atualizar o histórico de execução na tabela wed\_trace. 
-Caso esse novo WED-state satisfaça a condição final e não haja nenhuma WED-transition pendente, essa instancia é marcada como finalizada e não poderá ser
-modificada, a menos que sejam inseridos novos WED-attributes ou que sejam modificadas ou adicionadas novas WED-triggers. Em
-caso de não haver WED-transitions pendentes e esse WED-state não for final, a instância será marcada como exceção e uma
-entrada especial será adicionada a tabela job\_pool para indicar que algum mecanismo de recuperação deve ser iniciado.
+\indent Once in possession of a lock, the WED-worker must finish its job within the time limit defined for the WED-transition.
+The transaction is successfully finalized updating the current WED-state for this instance on the WED\_flow table.
+
 \begin{algorithm}
 \caption{WED-server}
 \label{alg1}
@@ -836,7 +835,7 @@ entrada especial será adicionada a tabela job\_pool para indicar que algum meca
 
 \begin{algorithm}
 \caption{WED-worker}
-\label{alg1}
+\label{alg2}
 \begin{algorithmic}[1]
 \REQUIRE WED-transition's name: \emph{trname}
 \ENSURE \textbf{true} for a successfully transaction,\\
@@ -863,7 +862,7 @@ entrada especial será adicionada a tabela job\_pool para indicar que algum meca
 \end{algorithmic}
 \end{algorithm}
 
-\section{Gerenciamento transacional}
+\section{Transactional Management}
 \label{GT}
 Cada instância de um WED-flow pode ser vista como uma Transação Longa (LLT) e, de acordo com ~\cite{SGD87},
 suas WED-transitions podem ser vistas como passos Saga. Sendo assim, é função do WED-server garantir a integridade dos estados
