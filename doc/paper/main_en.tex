@@ -620,53 +620,24 @@ Finally, the \emph{WED\_trig} entity represents the WED-triggers, that is, the a
 using the following attributes:
 
 \begin{itemize}
-\item $tgid$: o identificador único de uma WED-trigger;
-\item $tgname$: atributo opcional utilizado para dar um nome à WED-trigger;
-\item $enabled$: permite que a WED-trigger seja desativada;
-\item $trname$: identificador único da WED-transition associada.
-\item $cname$: atributo opcional que pode ser utilizado para dar um nome à WED-condition associada;
-\item $cpred$: predicado da WED-condition associada. Aceita qualquer predicado valido na claúsula \emph{WHERE} em SQL;
-\item $cfinal$: utilizado para indicar qual é a condição final. Embora apenas uma WED-condition possa ser marcada como final,
-           o operado lógico \emph{OU} pode ser utilizado em seu predicado para definir-se multiplos WED-states finais.
-\item $timeout$: tempo limite para que um WED-worker finalize a WED-transition representada por "trname".
-
+\item $tgid$: Primary key; 
+\item $tgname$: Optional parameter that indicates the name of the WED-trigger; 
+\item $enabled$: Allow a WED-trigger to be disabled;
+\item $trname$: Unique name of the associated WED-transition;
+\item $cname$: Optional, can be used to name the associated WED-condition; 
+\item $cpred$: WED-condition's predicated. Accepts the same syntax and tokens allowed in a SQL's \emph{WHERE} clause;
+\item $cfinal$: Mark a WED-condition as final. Although only one is allowed, multiple stop conditions can be defined 
+               combining then with the logical operator \emph{OR}; 
+\item $timeout$: Time limit to perform the WED-transition 
 \end{itemize}
 
+This conceptual data model is mapped to five database tables inside the WED-sever, one for each entity previously explained,
+using the very same name. The WED\_flow table is, however, special. It will be dynamically modified every time a new record
+is added, modified or removed from the WED\_attr table. For example, after inserting a new record into WED\_attr, a new column,
+having the same name of this new WED-attribute, will be added to WED\_flow. Each row in WED\_flow represents a distinct application
+instance.  
 
-
-
-
-O WED-server utiliza cinco tabelas para definir regras, propriedades e controlar o fluxo de execução dos WED-flows: WED\_attr,
-WED\_flow, WED\_trace, WED\_trig e Job\_pool.
-\\
-\indent  Os WED-attributes são definidos na tabela WED\_attr por um nome e, opcionalmente, por um valor padrão representados 
-pelas colunas "aname" e "adv" respectivamente. Cada WED-attribute é identificado univocamente por seu nome, que também é 
-a chave primária da tabela. Ao criar-se um novo WED-attribute, ou seja, ao inserir-se uma nova linha na tabela WED\_attr, 
-uma coluna de mesmo nome será automaticamente adicionada na tabela WED\_flow.
-\\
-\indent A tabela WED\_trig contém as WED-triggers, ou seja, cada entrada representa a associação de uma WED-condition com uma 
-WED-transition. Possui os seguintes atributos:
-
-\begin{itemize}
-\item $tgid$: o identificador único de uma WED-trigger;
-\item $tgname$: atributo opcional utilizado para dar um nome à WED-trigger;
-\item $enabled$: permite que a WED-trigger seja desativada;
-\item $trname$: identificador único da WED-transition associada.
-\item $cname$: atributo opcional que pode ser utilizado para dar um nome à WED-condition associada;
-\item $cpred$: predicado da WED-condition associada. Aceita qualquer predicado valido na claúsula \emph{WHERE} em SQL;
-\item $cfinal$: utilizado para indicar qual é a condição final. Embora apenas uma WED-condition possa ser marcada como final,
-           o operado lógico \emph{OU} pode ser utilizado em seu predicado para definir-se multiplos WED-states finais.
-\item $timeout$: tempo limite para que um WED-worker finalize a WED-transition representada por "trname".
-
-\end{itemize}
-
-
-  Finalmente, a tabela WED\_flow é o ponto de entrada para inicializar-se uma nova instância. Essa tabela é criada dinâmicamente
-de acordo com os WED-attributes definidos na tabela WED\_attr. Cada entrada em WED\_attr corresponde a uma coluna em WED\_flow.
-Suas entradas são o WED-state atual de cada instância, ou seja, são tuplas formadas por um identificador, representado
-na coluna "wid", e os WED-attributes. 
-
-\section{Funcionamento}
+\section{How it works}
 \begin{figure}[!t]
 \begin{Verbatim}[fontsize=\tiny]
 BEGIN;
@@ -686,40 +657,37 @@ INSERT INTO wed_trig (cpred,cfinal) VALUES ($$a1 <> 'ready'$$, True);
 
 COMMIT;
 \end{Verbatim}
-\caption{Exemplo de definição de um novo WED-flow}
+\caption{Defining a new WED-flow application}
 \label{code_new}
 \end{figure}
  
-Para se criar um novo WED-flow é preciso definir um conjunto de WED-atributes e um conjunto de WED-triggers associando
-WED-transitions à WED-conditions. Essa definição, por ora, é expressa em SQL. Veja um exemplo na
-figura~\ref{code_new}.
+A new WED-flow application is created by defining a set of WED-attributes and a set of WED-triggers that associates a 
+WED-condition to a WED-transition. This is accomplished, for the time being, writing these definition in SQL (see an example
+on Fig.~\ref{code_new}. In the foreseen future we plan to propose a SQL language extension to express at least the basic WED-flow operations. 
 \\
-\indent Note que os valores dos predicados para as WED-conditions, representados por meio da coluna "cpred", tem a mesma sintaxe
-utilizada para expressar as restrições de uma cláusula \emph{WHERE} em SQL. De fato, a expressão em "cpred" será utilizada \emph{as-is}
-pelo WED-server para disparar as WED-transitions. Ao utilizar-se duplo \$ para delimitar essa expressão, elimina-se a necessidade
-de "escapar" as aspas simples ou outros caracteres especiais.
+\indent Note that the expression of a WED-condition predicate (\emph{cpred}) uses the same syntax of the SQL clause \emph{WHERE}.
+In fact, this expression is employed \emph{as-is} for the WED-server while matching it against a WED-state. When surrounded
+by double \$ marks, special symbols like quotes don't need to be escaped in the predicate.
 \\
-\indent  Note também que a condição final de um WED-flow é declarada nessa mesma tabela WED\_trig, embora de modo simplificado.
-São necessários apenas o predicado em "cpred" e o valor Verdade em "cfinal". Caso não haja uma condição final na tabela
-WED\_trig, todas as instâncias desse WED-flow terminarão em um WED-state de exceção.
+\indent  Also note that, although the application's final condition statement is declared in the same WED\_trig table it does not
+have a WED-transition associated, otherwise it would be ignored by the WED-server anyway. To declare a WED-condition as
+final, one only need to specify its predicate and set the value of the \emph{cfinal} attribute to true. If the final condition
+is missing, all instances of a given application will end up in an exception state. 
 \\
-\indent É recomendado encapsular a definição de um WED-flow em uma única transação, uma vez que, no caso de um erro de sintaxe
-na definição de uma WED-trigger, por exemplo, seria necessário remover manualmente do WED-server as definições executadas
-até o momento do erro.
+\indent We encourage developers to encapsulate all definitions for a new WED-flow application into a single transaction. By doing
+so one can prevent a partially defined application in case of syntax errors, which may force the developer to manually truncate
+the system tables before running the script again. 
 \\
-\indent Embora seja possível definir múltiplos WED-flows em uma única base de dados, o WED-server permite que cada um deles 
-esteja localizado em uma base de dados distinta, de acordo com um determinado significado semântico. Com isso também é 
-possível isolar atributos que não devem ser compartilhados entre diferentes WED-flows. 
+\indent Although it is possible to define multiple applications in a single WED-flow database, the WED-server allows each one of
+then to be isolated in a different database. Therefore, applications can be grouped together by some semantic meaning and WED-attributes
+that must not be shared between some of then can be isolated. 
 
-\subsection{Definindo os WED-workers}
-Como mencionado anteriormente, quem executa as WED-transitions disparadas pelo WED-server são os WED-workers. Sendo assim,
-é necessário criar esses WED-workers e associá-los às respectivas WED-transitions. É recomendado ter ao menos um WED-worker
-associado a cada WED-transition.
-\\
-\indent Um WED-worker é uma aplicação cliente do WED-server e, por esse motivo, pode ser escrito em qualquer linguagem de progra-
-mação que tenha suporte para conectar-se ao sgbd PostgreSQL e que implemente o protocolo de comunicação do WED-server (descrito
-em detalhes nas próximas sessões). No escopo deste trabalho os WED-workers são escritos em Python utilizando-se o pacote \emph{BaseWorker}, 
-que acompanha o WED-SQL. A figura~\ref{fig_ww} ilustra a definição de um novo WED-worker.
+\subsection{Creating WED-workers}
+
+Since WED-workers are client applications of the WED-server, they can be written in any programming language that, somehow,
+is able to connect to the PostgreSQL database by simply implementing the WED-SQL's communication protocol (described in
+details on section~\ref{GT}). The WED-SQL provides a standard WED-worker implementation by means of a Python package named
+\emph{BaseWorker}. Figure~\ref{fig_ww} depicts an example of a WED-worker implemented with this package.
 
 \begin{figure}[!t]
 \begin{Verbatim}[fontsize=\tiny]
@@ -754,26 +722,30 @@ except KeyboardInterrupt:
     print()
     sys.exit(0)
 \end{Verbatim}
-\caption{Exemplo de definição de um novo WED-worker}
+\caption{Standard WED-worker implementation in Python}
 \label{fig_ww}
 \end{figure}
 
-O primeiro passo da implementação é importar a classe abstrata \emph{BaseClass} do pacote \emph{BaseWorker}. Essa classe 
-implementa a lógica do protocolo de comunicação e também gerencia as conexões com o WED-server. 
+The first step to write a WED-worker using the BaseWorker package is to import the module \emph{BaseClass}, which in fact
+is an abstract class that implements the communication protocol with the WED-server as well as manages all connections
+and transactions involved.  
 \\
-\indent  Em seguida é preciso definir uma classe concreta que estenda a BaseClass e implemente o método wed\_trans(),
-definindo os seguintes atributos utilizados para inicialização:
+\indent  Next, a concrete class must implement the abstract method \emph{wed\_trans()} from BaseClass and initialize the following
+class attributes: 
 \begin{itemize}
-\item \emph{trname}: nome da WED-transition que será executada por esse WED-worker. Precisa ser o mesmo nome utilizado na definição
-           do WED-flow;
-\item \emph{dbs}: parâmetros da conexão com o WED-server no formato aceito pelo driver \emph{psycopg2}. No mínimo devem ser especificados
-        o usuário, o nome da base de dados onde o WED-flow foi carregado e o nome do WED-worker por meio do campo \emph{"application\_name"};
-\item \emph{wakeup\_interval}: é o intervalo de tempo no qual o WED-worker fica suspenso esperando por uma notificação do WED-server;
+\item \emph{trname}: WED-transition name that will be carried out by this WED-worker. Must match the name used on the WED-flow definition;
+\item \emph{dbs}: WED-server connection parameters conforming the \emph{psycopg2} driver format. At least the username, database name and
+                 the WED-worker name must be provided;
+\item \emph{wakeup\_interval}: Time interval in which the WED-worker execution is suspended (sleeping) if there is no new WED-transitions
+                              to be performed (explained in details on section~\ref{not}); 
 \end{itemize}
-  O método wed\_trans() recebe como parâmetro o WED-state da instância do WED-flow que disparou a transação, e retorna uma 
-string com os novos valores dos WED-attributes dessa mesma instância. A sintaxe utilizada para esse valor de retorno deve
-ser a mesma utilizada em uma cláusula \emph{SET} da operação \emph{UPDATE} em SQL. O valor "None" pode ser retornado para abortar
-a transação. Essa classe concreta que implementa o WED-worker deve então ser instanciada e executada, invocando-se seu método \emph{run()}.
+
+The wed\_trans() method works on a specific WED-flow instance at a time. It receives, as a parameter, the WED-state that 
+fired this WED-transition and returns a string representing a new WED-state. This return value must comply with the same
+syntax used to specify a \emph{SET} clause of a \emph{UPDATE} SQL statement. An empty value can be returned to abort the
+transaction.
+\\
+\indent Finally, the concrete class can be instantiated and executed by invoking its \emph{run()} method.
 
 \section{Algoritmos}
 Após definir e carregar um WED-flow em uma base de dados do WED-server e inicializar seus respectivos WED-workers, uma
@@ -817,44 +789,44 @@ entrada especial será adicionada a tabela job\_pool para indicar que algum meca
 \caption{WED-server}
 \label{alg1}
 \begin{algorithmic}[1]
-\REQUIRE Instância $i$ de um WED-flow
-\ENSURE \textbf{true} se a transação foi bem sucedida,\\
-         \hspace{23pt}\textbf{false} em caso contrário
-\STATE $L \leftarrow$ lista vazia de WED-transitions 
-\STATE $s \leftarrow$ WED-state atual de $i$
+\REQUIRE WED-flow instance $i$
+\ENSURE \textbf{true} for a successfully transaction,\\
+         \hspace{23pt}\textbf{false} on the otherwise
+\STATE $L \leftarrow$ empty WED-transitions list 
+\STATE $s \leftarrow$ current WED-state of $i$
 \FOR{$tg$ in WED-triggers}
 \STATE $c,tr \leftarrow$ $tg($WED-condition$)$,$tg($WED-transition$)$
-\IF{$s$ satisfaz $c$}
-\IF{$c$ é a condição final}
-\STATE insira $\_FINAL$ em $L$
+\IF{$s$ satisfies $c$}
+\IF{$c$ is the final condition}
+\STATE insert $\_FINAL$ in $L$
 \ELSE
-\STATE insira $tr$ em $L$
+\STATE insert $tr$ in $L$
 \ENDIF
 \ENDIF
 \ENDFOR
-\IF{$L$ está vazia}
-\IF{$i$ é uma nova instância}
-\STATE Rejeite $i$ e aborte a transação
+\IF{$L$ is empty}
+\IF{$i$ is a new instance}
+\STATE Reject $i$ and abort the transaction
 \RETURN \FALSE
-\ELSIF{$i$ \textbf{NÃO} possui WED-transitions pendentes}
-\STATE Maque $i$ como WED-state de exceção
-\STATE Insira \_EXCPT em Job\_Pool
+\ELSIF{$i$ \textbf{DOES NOT} has any pending WED-transition}
+\STATE Set $i$ as an exception
+\STATE Insert \_EXCPT into Job\_Pool
 \ENDIF
-\STATE Atualize $i$ em WED\_trace
+\STATE Update $i$ at WED\_trace
 \RETURN \TRUE
-\ELSIF{$L$ contém $\_FINAL$}
-\IF{$i$ possui WED-transitions pendentes}
-\STATE Rejeite $i$ e aborte a transação
+\ELSIF{$L$ contains $\_FINAL$}
+\IF{$i$ has pending WED-transitions}
+\STATE Reject $i$ and abort the transaction
 \RETURN \FALSE
 \ELSE
-\STATE Marque $i$ como WED-state final
-\STATE Atualize $i$ em WED\_trace
+\STATE Set $i$ as a final WED-state
+\STATE Update $i$ at WED\_trace
 \RETURN \TRUE
 \ENDIF
 \ELSE
-\FOR{$tr$ em $L$}
-\STATE Insira $tr$ na tabela Job\_Pool
-\STATE Envie notificação para o WED-worker que executa $tr$
+\FOR{$tr$ in $L$}
+\STATE Insert $tr$ into Job\_Pool
+\STATE Notify the WED-worker(s) responsible for $tr$
 \RETURN \TRUE
 \ENDFOR
 \ENDIF
@@ -866,24 +838,24 @@ entrada especial será adicionada a tabela job\_pool para indicar que algum meca
 \caption{WED-worker}
 \label{alg1}
 \begin{algorithmic}[1]
-\REQUIRE Nome da WED-transition: \emph{trname}
-\ENSURE \textbf{true} se a transação foi bem sucedida,\\
-         \hspace{23pt}\textbf{false} em caso contrário
+\REQUIRE WED-transition's name: \emph{trname}
+\ENSURE \textbf{true} for a successfully transaction,\\
+         \hspace{23pt}\textbf{false} on the otherwise
 \LOOP
-\STATE $n \leftarrow$ Valor nulo
-\WHILE{$n$ é nula}
-\STATE $n \leftarrow espera\_notificacao(trname,wkup)$
-\IF [nenhuma notificação recebida após esperar $wkup$ segundos]{$n$ é nula}
-\STATE $n \leftarrow $ busque por WED-transitions $trname$ pendentes no WED-server
+\STATE $n \leftarrow$ Null value
+\WHILE{$n$ is Null}
+\STATE $n \leftarrow wait\_for\_notification(trname,wkup)$
+\IF [No notification has arrived after $wkup$ seconds]{$n$ is Null}
+\STATE $n \leftarrow $ Ask WED-server for any $trname$ pending WED-transition
 \ENDIF
 \ENDWHILE
-\STATE Inicia a transação 
-\IF {obter\_trava($n$)} 
-\STATE Execute a WED-transition $trname$ para uma determinada instância $i$ do WED-flow
-\STATE Finalize a transação
+\STATE Initiate the transaction
+\IF {got\_lock($n$)} 
+\STATE Run the WED-transition $trname$ for a given $i$ WED-flow instance
+\STATE Commit the transaction
 \RETURN \TRUE
 \ELSE
-\STATE Aborte a transação
+\STATE Abort the transaction
 \RETURN \FALSE
 \ENDIF  
 \ENDLOOP
@@ -892,6 +864,7 @@ entrada especial será adicionada a tabela job\_pool para indicar que algum meca
 \end{algorithm}
 
 \section{Gerenciamento transacional}
+\label{GT}
 Cada instância de um WED-flow pode ser vista como uma Transação Longa (LLT) e, de acordo com ~\cite{SGD87},
 suas WED-transitions podem ser vistas como passos Saga. Sendo assim, é função do WED-server garantir a integridade dos estados
 de dados, manter a consistência transacional e garantir que todo WED-flow termine ou em um estado final ou em um estado
@@ -902,6 +875,7 @@ comunicação entre múltiplos WED-workers e um WED-server.
 
 %DETALHES DE FUNCIONAMENTO (seriação,locks(),keep connection alive(pessimistic locking),excessoes, tras simultaneas,continuous query,protocolo de comunicaocao, balanço: coneccoes x demanda,payload pode nao ser o estado atual mvcc)
 \subsection{Notificações}
+\label{not}
 %send notify vs continuous query
 Ao modelar um sistema cujas operações principais são realizadas com base em eventos de dados, é preciso também conceber-se
 algum tipo de mecanismo capaz de capturar tais eventos. Quando esses dados estão armazenados em um SGBD, uma possível 
