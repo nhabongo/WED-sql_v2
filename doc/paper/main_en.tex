@@ -959,48 +959,37 @@ would be aborted anyway due to time out. Second, the WED-server would need to kn
 WED-transition to set, potentially harming its exception handling capability. Moreover, the locking solution was chosen 
 once it can also be used to solve concurrency conflicts.    
 
-\par
+\par PostgreSQL provides client applications with several explicit locking mechanisms, just in case a more refined control
+over the data is required. These locks can be used in either table or row level and are automatically acquired for the DBMS
+native operations. In the WED-SQL context though, only row level locks are explicitly employed.  
 
-\par O SGDB PostgreSQL oferece um mecanismo de travas explicitas para aplicações que necessitam exercer um controle mais
-refinado sobre os dados acessados. Essas travas podem ser utilizadas tanto a nível de tabelas quanto a nível de tuplas, ou seja,
-linhas ou registros das tabelas. No contexto do WED-SQL, apenas as travas a nível de tuplas são utilizadas explicitamente.
+\par The most common exclusive access row level lock is acquired using the SQL expression \emph{FOR UPDATE} by the end of
+a \emph{SELECT} command. When a transaction try to lock a row that was previously locked with that lock, it will be either blocked,
+and wait until the current transaction ends, or aborted if the expression \emph{NOWAIT} was present after \emph{FOR UPDATE}.
+There is however another type of lock that can be used to achieve this same behavior: they are named \emph{Advisory Locks}.
 
-\par A trava a nível de tupla mais comumente utilizada é chamada \emph{FOR UPDATE}. Utilizada em conjunto com o comando SQL
-\emph{SELECT}, essa trava, de acesso exclusivo, faz com que outras transações concorrentes tenham que esperar ou abortar
-ao tentarem acessar a tupla bloqueada. Outro tipo de trava que também pode ser utilizada a nível de tupla são as 
-\emph{Advisory Locks}, ou travas semânticas. Para utilizar esse tipo de trava é preciso definir seu significado semântico na aplicação, uma vez que
-o PostgreSQL não obriga que sua regra de acesso seja cumprida, ou seja, os registros não são realmente bloqueados. 
+\par Advisory Locks work in a semantic level, that is, they are only useful when they have some semantic meaning in the 
+application. Put in other words, the DBMS do not enforce their use and nothing is really locked. It is up to the application
+to use then rightly. As an example, in the WED-server, pending WED-transitions siting in the Job\_Pool table are uniquely
+identified by the attributes pair (\emph{wid},\emph{tgid}). WED-workers requests Advisory Locks based on this composite key, 
+which is only granted only once for each pair until the transaction is over. When a lock is not granted for a WED-work, it
+knows that some other "sibling" is currently working on that WED-transition, even tough the record is not really blocked
+on the database, and then it is free to look for another task. Once again, the WED-server will blocked transactions not
+holding a valid lock. 
+ 
+\par Given that the \emph{FOR UPDATE} approach seems to be the more straight forward way to manage WED-transitions, why
+did we decide to stick with Advisory Locks ? Well, one reason is purely technical and is based on how PostgreSQL
+works with different types of locks. Another one is due to how the WED-state transitions is carried out by our framework. 
 
-\par Por exemplo, no WED-server as WED-transitions pendentes são identificadas pelo par (wid,tgid). Esse identificador é
-utilizado pelos WED-workers para requisitar uma \emph{Advisory Lock}, que será concedida apenas à primeira transação que
-a solicitar para o dado registro. As demais transações que tentarem acessar o mesmo registro não conseguiram obter a trava,
-e estarão livres para tentar executar outras WED-transitions pendentes, embora o registro não esteja de fato bloqueado. Vale
-lembrar que, obter essa trava para a instância específica que será atualizada, é mandatório para completar a transação com sucesso.
+\par Regarding the technical aspects of the DBMS, information about \emph{FOR UPDATE} locks are kept on disk instead of
+the RAM memory. Because of that, this data does not show up in system catalogs, and can only be obtained in real time
+using a third party module (pgrowlocks) that, besides being supplied by PostgreSQL itself, is rather inefficient. On the
+other hand, information about Advisory Locks can be easily, and efficiently, obtained directly from system catalogs.  
 
-\par Por que são utilizadas \emph{Advisory Locks} ao invés de \emph{FOR UPDATE} no WED-SQL ? Por dois motivos: primeiramente
-pelo modo como o PostgreSQL funciona internamente e, em segundo lugar, pela natureza da operação de  transição de estados
-no contexto do WED-SQL. 
-
-\par O principal motivo para não utilizar travas do tipo \emph{FOR UPDATE} é que as informações sobre
-quais tuplas estão bloqueadas são armazenadas em disco, e não em memória RAM. Com isso, é necessário utilizar um plugin
-externo ao SGBD para recuperar tais informações, necessárias ao WED-server para realizar o controle do tempo de vida
-de cada transação. Por outro lado, as informações sobre \emph{Advisory Locks} podem ser obtidas facilmente, por meio de
-uma simples consulta a um catálogo interno do PostgreSQL. 
-
-\par Outro motivo para não se utilizar \emph{FOR UPDATE} no controle transacional, é que o registro que seria bloqueado
-não é o registro que será atualizado. As travas são obtidas na tabela Job\_Pool, porém as atualizações são executadas na
-tabela WED\_flow. Desse modo é mais simples, seguro e eficiente utilizar travas semânticas no WED-server.
-
-
-
-
-
-
-
-
-
-
-
+\par On WED-SQL, a WED-transition begins on the Job\_Pool table and ends on the WED\_flow table. So, it would be somewhat
+awkward to lock a row on a table, using a FOR UPDATE lock, to update a record on another one. Not only that but it also 
+could get messy. Therefore, the semantic locks based solution is simpler to implement, in this context is safer for usage 
+and is also a more elegant approach.   
 
 
 \subsection{Isolamento e paralelismo}
