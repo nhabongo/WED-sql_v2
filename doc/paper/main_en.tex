@@ -891,7 +891,7 @@ often they pop up. In order to implement this model efficiently, it is critical 
 occurrence, especially in the presence of multiple distinct events, once there is an overhead cost involved in performing
 a query that cannot be disregarded. In the other hand, if this time estimation is unpredictable for some or all of the
 events, the suitable query must be executed as frequent as possible, otherwise threatening the system's real time response 
-capability. Anyway, the Continuous Query model is not well suitable to every data event driven system, which ultimatelly
+capability. Anyway, the Continuous Query model is not well suitable to every data event driven system, which ultimately
 may lead to waste of computational resources, increasing the overall power consumption and possible overloading the system.     
   
 \par Since the WED-SQL is also a real time data event detection system, it is indeed part of the WED-server main algorithm,
@@ -933,34 +933,33 @@ the WED-worker, what's the reason to send this data to then ? The answer is simp
 WED-condition is as disjunction of predicates, the WED-worker may need to know which ones were satisfied by the WED-state.
 Having this data before hand eliminates the need to query the WED\_trace table.
 
-\par It very important to note that a WED-worker should never rely in WED-attributes values that were not specified in
+\par It is very important to note that a WED-worker should never rely in WED-attributes values that were not specified in
 the WED-condition's predicate, once, apart from being a project error, it may end up capturing spurious conditions or refusing
 to perform a legitimate one.
 
-\subsection{Controle transacional e de concorrência}
+\subsection{Performing WED-transitions}
 %wed-trans, why lock ?, types of locks , why advisory(pg_row_locks)
 %locks are needed for: 1-keep track of wed-trans; 2-concurrency control between wed-workers (pg_locks, select for update nowait)
 
-Antes que uma WED-transition possa ser executada, é necessário que a respectiva tarefa esteja registrada na tabela Job\_Pool e que
-o WED-worker que irá executá-la garanta exclusividade de execução. Isso é efeito requisitando uma trava ao WED-server na tarefa
-especificada. Essa trava é necessária por dois motivos: permitir que o WED-server tenha controle sobre o tempo de vida da transação;
-gerenciar conflitos entre transações concorrentes.
+WED-workers can only perform WED-transitions properly recorded on the Job\_Pool table. Moreover, they must request the WED-server
+an exclusive execution lock on the task to be performed, being free to proceed once this lock is granted. The WED-server rely
+on this lock protocol to enforce each transaction to complete or abort within the time limits specified for each WED-transition.
+It also used to solve conflicts between concurrent WED-workers. 
 
-\par O modelo WED-flow prevê que cada WED-transition tenha um tempo limite de execução. Para atender a esse requisito, o WED-server
-precisa identificar a transição que está sendo executada e monitorar o seu tempo de vida. Vale lembrar que a execução de uma
-WED-transition está encapsulada em uma única transação. Um modo de forçar as transações a se identificarem é exigir que as mesmas
-solicitem uma trava exclusiva ao WED-server. Outra possível solução seria identificar a transação semanticamente de acordo
-com o novo WED-state gerado, e nesse caso teríamos dois problemas: o WED-server apenas seria capaz de identificar a transação
-no momento da atualização da instância, fazendo com que as transações pudessem ficar ativas muito além de seu tempo limite para
-só então serem finalizadas, potencialmente limitando o tempo máximo de execução para todas as transações; seria necessário manter 
-um conjunto de possíveis estados de dados pré-definidos, limitando a capacidade do modelo em lidar com exceções. Além do mais,
-o WED-SQL utiliza essas travas de execução para resolver problemas de concorrência entre WED-workers e, com isso,
-é a solução adotada para a identificação das transações. 
+\par One characteristic of a well designed WED-flows project is the presence of reasonable execution time limits for its WED-transitions.
+Although it is up to the project designers to define these time limits, it is the role of the WED-server to enforce these restrictions.
+In order to accomplish that, it must first identify a WED-transition that is about to begin, and then keep track of its running time.
+It i worth to remember that each WED-transition is wrapped in a single transaction.
 
-\par Cada WED-transition pode ter multiplos WED-workers idênticos associados. Isso pode ser necessário para atender a demanda 
-gerada por um WED-flow com muitas instâncias. Para evitar que mais de um WED-worker execute a mesma WED-transition na mesma
-instância, o mesmo deve registrar interesse em executá-la por meio da requisição ao WED-server de uma trava exclusiva na linha
-correspondente da tabela Job\_Pool, que é identificada por seu WED-flow id (wid) e a WED-trigger id (tgid) que a disparou.
+\par One way to force transactions to identify themselves is to require a exclusive lock when performing WED-transitions,
+effectively informing the WED-server of what task in Job\_Pool is going to be worked on. Another possible solution would
+be semantically identify the WED-transition based on the new WED-state that is about to be committed, but not without a 
+few caveats: First, it could allow a transaction to stay alive much longer than necessary in the case when a WED-transition
+would be aborted anyway due to time out. Second, the WED-server would need to know which new WED-states are valid for each
+WED-transition to set, potentially harming its exception handling capability. Moreover, the locking solution was chosen 
+once it can also be used to solve concurrency conflicts.    
+
+\par
 
 \par O SGDB PostgreSQL oferece um mecanismo de travas explicitas para aplicações que necessitam exercer um controle mais
 refinado sobre os dados acessados. Essas travas podem ser utilizadas tanto a nível de tabelas quanto a nível de tuplas, ou seja,
@@ -991,6 +990,15 @@ uma simples consulta a um catálogo interno do PostgreSQL.
 \par Outro motivo para não se utilizar \emph{FOR UPDATE} no controle transacional, é que o registro que seria bloqueado
 não é o registro que será atualizado. As travas são obtidas na tabela Job\_Pool, porém as atualizações são executadas na
 tabela WED\_flow. Desse modo é mais simples, seguro e eficiente utilizar travas semânticas no WED-server.
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1247,26 +1255,26 @@ The authors would like to thank...
 \begin{thebibliography}{1}
 
 \bibitem{FTPM10}
-João E. Ferreira, Osvaldo K. Takai, Simon Malkowski e Calton Pu. 
+João E. Ferreira, Osvaldo K. Takai, Simon Malkowski and Calton Pu. 
 \emph{Reducing exception handling complexity in business process modeling and implementation:
 the WED-flow approach.}, Em Proceedings of the 2010 international conference on
-On the move to meaningful internet systems - Volume Part I, OTM’10, páginas
+On the move to meaningful internet systems - Volume Part I, OTM’10, pages
 150–167. Springer-Verlag, 2010.
 
 \bibitem{ICWS12}
-João Eduardo Ferreira, Kelly Rosa Braghetto, Osvaldo Kotaro Takai e
+João Eduardo Ferreira, Kelly Rosa Braghetto, Osvaldo Kotaro Takai and
 Calton Pu.\emph{ Transactional recovery support for robust exception handling in business process
-services.} Em Proceedings of the 19th International Conference on Web Services (ICWS), páginas
+services.} Em Proceedings of the 19th International Conference on Web Services (ICWS), pages
 303–310, 2012
 
 \bibitem{SGD87}
 Hector Garcia Molina, Kenneth Salem.
-\emph{Sagas}, Em Proceeding of the 1987 ACM SIGMOD International Conference on Management of Data, páginas 249-259, 1987
+\emph{Sagas}, Em Proceeding of the 1987 ACM SIGMOD International Conference on Management of Data, page 249-259, 1987
 
 \bibitem{CQ}
 Ling Liu, Calton Pu, Wei Tang.
 \emph{Continual Queries for Internet Scale Event-Driven Information Delivery},
-IEEE Trans. on Knowl. and Data Eng. 11, páginas 610–628, 1999
+IEEE Trans. on Knowl. and Data Eng. 11, pages 610–628, 1999
 
 \bibitem{NAV}
 Ramez Elmasri, Shamkant B. Navathe.
@@ -1275,7 +1283,7 @@ Ramez Elmasri, Shamkant B. Navathe.
 \bibitem{WT}
 Marcela Ortega Garcia, Pedro Paulo de S. B. da Silva, Kelly Rosa Braghetto e João Eduardo Ferreira.
 \emph{Wed-tool: uma ferramenta para o controle de execução de processos de negócio transacionais},
-Proceedings of the 27th Brazillian Symposium on Databases - Demos and Applications Session, página 36, 2012
+Proceedings of the 27th Brazillian Symposium on Databases - Demos and Applications Session, page 36, 2012
 
 \bibitem{PSQL}
 PostgreSQL, v9.5.x \\
