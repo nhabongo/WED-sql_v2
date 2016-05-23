@@ -968,7 +968,7 @@ a \emph{SELECT} command. When a transaction try to lock a row that was previousl
 and wait until the current transaction ends, or aborted if the expression \emph{NOWAIT} was present after \emph{FOR UPDATE}.
 There is however another type of lock that can be used to achieve this same behavior: they are named \emph{Advisory Locks}.
 
-\par Advisory Locks work in a semantic level, that is, they are only useful when they have some semantic meaning in the 
+\par Advisory Locks work on a semantic level, that is, they are only useful when they have some semantic meaning in the 
 application. Put in other words, the DBMS do not enforce their use and nothing is really locked. It is up to the application
 to use then rightly. As an example, in the WED-server, pending WED-transitions siting in the Job\_Pool table are uniquely
 identified by the attributes pair (\emph{wid},\emph{tgid}). WED-workers requests Advisory Locks based on this composite key, 
@@ -992,10 +992,12 @@ could get messy. Therefore, the semantic locks based solution is simpler to impl
 and is also a more elegant approach.   
 
 
-\subsection{Isolamento e paralelismo}
-O PostgreSQL utiliza o modelo MVCC~\cite{NAV} para manter a integridade dos dados. Isso significa que cada transação enxerga uma "foto"
-do banco de dados no momento em que a mesma inicia, garantindo seu isolamento uma vez que não há compartilhamento de dados
-parciais entre transações ativas. Nesse modelo de controle de concorrência, travas de leitura não conflitam com travas de escrita.
+\subsection{Transaction isolation and parallelism }
+
+PostgreSQL employs a multi version concurrency control model (MVCC) to maintain data integrity. This means that each transaction
+sees a snapshot of the database taken right before it begins to run, which keeps then isolated from each other since no uncommitted 
+data is shared between concurrent transactions. Another property of this model is that data read locks never conflicts with
+data write locks, minimizing lock contention.
 
 \par O padrão ISO/ANSI SQL define quatro níveis de isolamento transacional. Em ordem de restrição: \emph{
 Read Uncommited, Read Commited, Repeatable Read e Serializable}
