@@ -1016,31 +1016,29 @@ transactions. In case of writing conflicts, only one transaction will be allowed
 Nevertheless, the SQL standard predicts that a phenomena called \emph{phantom read}, in which a result set that matches some
 condition differs on two successive runs of the same statement, may occur in this level. This cannot happen in PostgreSQL tough.
 
-\par O último e mais restritivo nível de isolamento é o \emph{Serializable}. De acordo com o padrão, um conjunto de transações
-concorrentes executando nesse nível deve produzir o mesmo resultado da execução sequencial em alguma ordem. Sendo assim, nenhum
-dos fenômenos mencionados anteriormente ocorre. No PostgreSQL, esse nível de isolamento funciona exatamente como o \emph{Repeatable Read}
-a menos da introdução de um mecanismo para detectar anomalias que poderiam levar a um resultado não condizente com todas
-as possíveis execuções de um conjunto de transações em série.
+\par The last and more strict level is the \emph{Serializable}. According to the standard, a set o concurrent transaction
+running in this level must yield the same result as running then serially in some order. Due to this requirement, none of 
+the previously mentioned phenomena can occur. In PostgreSQL, this level behaves just like the \emph{Repeatable Read} apart
+of the introduction of a mechanism to detect non serializable executions orders. 
+ 
+\par Regarding the WED-server, the default transaction isolation level is the \emph{Read Committed}. Due to how its
+WED-state detection mechanism works, and also to the MVCC model, concurrent WED-transitions don't need to fully isolated 
+from each other, in addition, the order of their execution is never critical for a correctly designed WED-flow project. 
+For instance, if a WED-transition aborts after setting up a new WED-state, the possible fired new WED-transitions
+will never be seen by the WED-workers, and the database returns to the previous consistent state.  
 
-\par No WED-server, assim como no PostgreSQL, o nível padrão de isolamento transacional é o \emph{Read Commited}. Isso só
-é possível graças ao seu mecanismo de detecção de estados de dados que, valendo-se do modelo MVCC, gera uma nova versão das
-tabelas relevantes toda vez que uma transação modifica uma instância de um WED-flow. Sendo assim, no caso de duas transações 
-concorrentes, por exemplo, não é preciso que uma delas seja abortada, o que ocorreria em níveis mais restritos de isolamento.
-Caso uma transação aborte, o WED-server descarta as alterações realizadas. Transações que operam em instância distintas 
-são executadas totalmente em paralelo. Além disso, os WED-workers não exergarao as novas WED-transitions 
-disparadas até que transação que escreveu o novo estado de dados finalize com sucesso.
-
-\par WED-workers que trabalham simultaneamente na mesma instância executam em paralelo até o momento final, onde necessitam
-atualizar o estado de dados dessa instância. Nesse momento, a execução se dará de modo sequencial, uma vez que o PostreSQL
-irá conceder uma trava implicita para a tupla que será modificada. Vale notar que a atualização da instância deve ser a 
-ultima operação executada pelo WED-worker, limitando o tempo de espera à quantidade de transações pendentes multiplicada 
-pelo tempo de execução do comando SQL UPDATE. Caso contrário, a execução ocorre em paralelo (veja a figura~\ref{fig_wf}).
+\par Concerning the WED-workers, they are able to work in parallel on a same WED-flow instance until the final moment, when
+they need to update the WED-state. At this point, each transaction will be granted a lock to update this instance at a time,
+while the others must either wait or abort. During a normal operation of the WED-server,this last step of performing a WED-transition
+should be fast, therefore worthwhile for concurrent transactions to wait at least for some small amount of time before they
+eventually decide to abort. This waiting time to commit is bounded by the number of concurrent transactions waiting for 
+the lock multiplied by how long the WED-server takes to perform the update. Distinct WED-flow instances can be worked fully
+in parallel (See Figure ~\ref{fig_wf}).
    
 \begin{figure}[!t]
 \centering
 \includegraphics[width=2.5in]{wed-flow2.png}
-\caption{Os WED-workers 1 e 2 trabalham na mesma instância e precisam sincronizar a atualização do WED-state na tabela
-WED-flow}
+\caption{WED-workers one and two working on the same instance may need to synchronize their update at the WED\_flow table}
 \label{fig_wf}
 \end{figure}
 %escalabilidade (horizontal, vertical, consistencia transacional, pg_shard) 
