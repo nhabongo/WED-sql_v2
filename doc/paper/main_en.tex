@@ -999,23 +999,22 @@ sees a snapshot of the database taken right before it begins to run, which keeps
 data is shared between concurrent transactions. Another property of this model is that data read locks never conflicts with
 data write locks, minimizing lock contention.
 
-\par O padrão ISO/ANSI SQL define quatro níveis de isolamento transacional. Em ordem de restrição: \emph{
-Read Uncommited, Read Commited, Repeatable Read e Serializable}
+\par The ISO/ANSI SQL standard defines four levels for transaction isolation. In increasing order of restrictiveness are they: 
+\emph{Read Uncommitted, Read Committed, Repeatable Read e Serializable}
 
-\par No nível menos restritivo,\emph{Read Uncommited}, uma transação enxerga modificações realizadas por outras transações
-concorrentes que ainda não finalizaram. Esse fenômeno é conhecido como \emph{dirty read}. No PostgreSQL, transações que executam
-nesse nível de isolamento são na verdade executadas no nível \emph{Read Commited}, que é o nível mínimo de isolamento possível
-na arquitetura MVCC. De qualquer modo, o padrão permite que um SGBD execute suas transações em um nível mais restritivo
-de isolamento do que o requisitado.
+\par In the less strict level, \emph{Read Uncommitted}, a transaction can see modifications performed by others ongoing 
+concurrent transactions. This phenomena, know as \emph{dirty reads}, is nonetheless not allowed in PostgreSQL due to the
+MVCC architecture, and transactions that request this isolation level are effectively performed in the \emph{Read Committed}
+level. Anyway, the SQL standard permits a DBMS to to run a transaction in a stricter level than requested.
 
-\par Transações que executam no nível \emph{Read Commited} podem enxergar modificações realizadas por transações concorrentes
-que finalizem durante sua execução. Por exemplo, a leitura de uma mesma tupla duas ou mais vezes, dentro de uma mesma transação,
-pode retornar valores diferentes. Esse fenômeno é conhecido por \emph{nonrepeatable read}. Esse é o nível padrao do PostgreSQL.
+\par Transactions running in the \emph{Read Committed} level will view data committed by concurrent transaction, in the sense that
+two consecutive runs of a select statement may return a different set as a result, even though it is performed inside a 
+single transaction. This phenomena is know as \emph{nonrepeatable read}.
 
-\par Ao contrário do nível anterior, no nível \emph{Repetable Read}, uma transação ativa não enxerga tuplas modificadas
-por outras transações que finalizem previamente. Em caso de conflito, apenas uma transação finaliza e as outras são abortadas.
-Ainda assim, é possível ocorrer um fenômeno chamado de \emph{phantom read}, no qual um conjunto de tuplas que satisfaça uma
-determinada condição difere em duas execuções da mesma consulta na mesma transação. No PostgreSQL esse fenômeno não ocorre.
+\par Conversely, a transaction performing in the \emph{Repetable Read} level cannot view any results produced by concurrent
+transactions. In case of writing conflicts, only one transaction will be allowed to proceed and the others will be aborted.
+Nevertheless, the SQL standard predicts that a phenomena called \emph{phantom read}, in which a result set that matches some
+condition differs on two successive runs of the same statement, may occur in this level. This cannot happen in PostgreSQL tough.
 
 \par O último e mais restritivo nível de isolamento é o \emph{Serializable}. De acordo com o padrão, um conjunto de transações
 concorrentes executando nesse nível deve produzir o mesmo resultado da execução sequencial em alguma ordem. Sendo assim, nenhum
