@@ -1128,7 +1128,7 @@ in parallel (See Figure ~\ref{fig_wf}).
 % floats. This can be corrected via the \fnbelowfloat command of the
 % stfloats package.
 
-\section{Trabalhos Futuros}
+\section{Future Work}
 %pgBouncer = breaks notify
 %wasting connections
 %pubsub (rabbitMQ, real event bus)
@@ -1136,32 +1136,26 @@ in parallel (See Figure ~\ref{fig_wf}).
 %file descriptor per process
 %(linguagem, gerenciador de conecções, ...)
 
-Na próxima fase desse projeto serão incorporadas duas funcionalidades essenciais para o sucesso do projeto WED-SQL: uma
-linguagem declarativa para expressar as operações nativas do WED-flow e um módulo específico para gerenciar as conexões
-com o WED-server.
+The next phases of this work will be focused in two main tasks: Create a declarative language capable of natively express all
+the WED-flow's definitions and operations; Develop a connection manager module to reduce computer resources utilization
+by the WED-server when too many WED-workers are simultaneously in use.    
 
-\par Quanto à linguagem, a ideia é criar uma extensão da SQL (de codinome WSQL) que encapsule as operações nativas do WED-flow e integrá-la
-ao interpretador do PostgreSQL, o qual será então responsável por traduzir e executar código SQL nativo e outras operações que,
-nesse momento, são realizadas por meio de um conjunto de \emph{shell scripts}. Por meio dessa abstração, será possível 
-deixar a sintaxe declarativa do WED-server mais próxima do modelo teórico, simplificando sua utilização.
+Regarding the language, the idea is to extend the SQL language, defining new tokens and grammatical rules, and integrate it
+to the PostgreSQL parser. By approximating the syntax used on the WED-server to the mathematical definitions of the theoretical 
+model, we aim to make the implementation of a WED-flow project as smooth as possible. 
 
-\par Em Linux, um processo pode criar um clone de si mesmo para executar uma porção específica de código de modo independente.
-O PostgreSQL, assim como muitos outros serviços que atendem à requisições externas, utiliza essa técnica sempre que 
-for estabelecida uma nova conexão com uma aplicação cliente. Ao analisar a utilização de recursos do sistema operacional
-, é possível observar que cada novo sub-processo gerado ocupa cerca de 9MB de memória RAM. Como consequência, há um limite
-físico no número de conexões que podem ser estabelecidas simultaneamente. No caso do WED-SQL, cada WED-worker precisa 
-manter uma conexão ativa com o WED-server para receber as notificações
-assíncronas em tempo real, além de estabelecer uma segunda conexão para efetivamente executar a WED-transition. Sendo
-assim, para cada WED-worker ativo são criados dois sub-processos do PostgreSQL, o que acaba por consumir em média 18MB
-de RAM.
+PostgreSQL forks itself every time a new connection is established with a client application, creating a new system process.
+A analysis of the system resources utilization has show that each of these new process uses, on average, 9MB of RAM memory,
+what imposes a considerable limitation on the amount of simultaneous connections that the WED-server is capable of dealing with.
+Although a connection pool, in which connections are shared among non overlapping transactions, would
+suffice to circumvent this limitation, it cannot be employed with the \emph{Asynchronous Notifications} pattern, once a connection
+must be kept alive to ensure that messages don't get lost.
 
-\par As notificações assíncronas do PostgreSQL são baseadas em um modelo de comunicação conhecido por \emph{Publish-Subscribe},
-onde quem envia uma mensagem não esta ciente da existência de quem a recebe. Sendo assim, é possível utilizar uma especie
-de WED-worker específico que funcionaria com um detector de eventos em tempo real para receber e distribuir as mensagens
-para os demais WED-workers, o qual utilizaria uma única conexão com o WED-server, efetivamente dobrando a quantidade
-de WED-transitions simultâneas. Há diversas soluções prontas para implementar esse mecanismo, umas delas é o software 
-RabbitMQ.
-
+Since the asynchronous notifications are based on a \emph{Publish-Subscribe} approach, in which message senders are not
+aware of receivers, it is possible to implement some kind of a dedicated WED-worker to receive all notifications and wake
+the others when is appropriate. This could easily double the number of simultaneous WED-transitions that the WED-server
+can handle using the same amount of RAM memory, once each WED-worker currently needs two connections - one to receive notifications
+and another one to perform the WED-transition. There is also some third-party solutions like the RabbitMQ software.
 
 \section{Conclusão}
 
