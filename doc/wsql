@@ -21,10 +21,26 @@ create wed-flow nhaga;
 
 create wed-attribute a1 default value '67';
 
-create wed-trigger t1=(tr1 timeout '00:00:00', cd1 as a1 is not null and (a1 <> 'nhaga'));
+create wed-transition t1 timeout '00:00:00';
 
-create final wed-condition cf as a1='bongo'
+create [final | regular] wed-condition cf as a1='bongo'
 
-create wed-flow instance as ...
+create wed-trigger t1 as (tr1 [timeout '00:00:00'], cd1 [as a1 is not null and (a1 <> 'nhaga')]);
+
+create [default] instance as ...
+
+enable/disable wed-trigger t1;
+
+list [enabled | disabled] wed-triggers;
+
+list wed-attributes;
+
+list [pending | ongoing] wed-transitions [for wid];
+
+list [final | exception | regular] instances;
+
+update wed-attribute a1 default value '68';
+
+get trace for [wid];
 
 
