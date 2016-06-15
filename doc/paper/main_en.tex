@@ -1157,24 +1157,18 @@ the others when is appropriate. This could easily double the number of simultane
 can handle using the same amount of RAM memory, once each WED-worker currently needs two connections - one to receive notifications
 and another one to perform the WED-transition. There is also some third-party solutions like the RabbitMQ software.
 
-\section{Conclusão}
+\section{Final Conclusions}
 
-Desde sua concepção em 2010~\cite{FTPM10}, o paradigma WED-flow não parou de evoluir. Novos estudos, realizados antes
-e durante o desenvolvimento deste trabalho, mostram que embora a ferramenta WED-tool~\cite{WT} implemente o WED-flow, 
-na prática ela ja não atende aos novos requisitos dessas novas aplicações. 
+The WED-flow approach has been evolving since its first proposal back in 2010~\cite{FTPM10}. Previous and ongoing studies
+have raised new demands for a framework capable of support more advanced features present in modern WED-flow models, which
+are no longer meet by the only prototype tool available until now, the WED-tool~\cite{WT}. 
 
-\par A WED-SQL está sendo estrategicamente elaborada para suprir essa demanda. Sua integração ao SGBD garante que o controle
-de fluxo proposto pelo modelo seja executado com propriedades transacionais nativas, além de dispor do mais avançado aparato
-para o controle de concorrência assim como garantir a integridade dos dados com as propriedades ACID. A adoção do modelo 
-cliente servidor tem por objetivo viabilizar a sua implementação em ambientes distribuídos, uma vez que os WED-workers
-tipicamente serão implementados como \emph{Web Services} e múltiplos WED-servers poderão ser utilizados simultaneamente,
-seja para manter a disponibilidade, quanto para balanceamento de carga. Ao utilizar uma linguagem declarativa própria 
-para a WED-SQL, é possível aproximar sua sintaxe da utilizada no modelo teórico, simplificando sua utilização, e eventualmente
-lançar uma versão especial do PostgreSQL otimizada para o WED-flow.
+The WED-SQL framework has meticulously been built to supply these demands. Its integration to a RDBMS ensures that a application's
+flux control is always performed under transactional rules and governed by ACID properties. By adopting a client-server
+architecture it was designed to run in a distributed environment and be scaled to support thousands of parallel transactions.
+In summary, WED-SQL is not only the most advanced WED-flow framework but it also aims spread the adoption of the WED-flow
+approach to design and implement business process models by providing an easy to use and reliable tool.  
 
-\par Resumindo, trata se de uma ferramenta moderna, altamente escalável, construída em um ambiente transacional cujo
-principal objetivo é simplificar a utilização e a implementação de modelos de processos de negócio desenvolvidos sob
-o paradigma WED-flow.
 
 %\blindtext
 
@@ -1234,7 +1228,7 @@ The authors would like to thank...
 % <OR> manually copy in the resultant .bbl file
 % set second argument of \begin to the number of references
 % (used to reserve space for the reference number labels box)
-\begin{thebibliography}{1}
+\begin{thebibliography}{9}
 
 \bibitem{FTPM10}
 João E. Ferreira, Osvaldo K. Takai, Simon Malkowski and Calton Pu. 
@@ -1263,9 +1257,9 @@ Ramez Elmasri, Shamkant B. Navathe.
 \emph{Fundamentals of Database Systems}, 6th ed, chapters 1.6.9 and 22.3, 2010
 
 \bibitem{WT}
-Marcela Ortega Garcia, Pedro Paulo de S. B. da Silva, Kelly Rosa Braghetto e João Eduardo Ferreira.
-\emph{Wed-tool: uma ferramenta para o controle de execução de processos de negócio transacionais},
-Proceedings of the 27th Brazillian Symposium on Databases - Demos and Applications Session, page 36, 2012
+Marcela Ortega Garcia, Kelly Rosa Braghetto, Calton Pu e João Eduardo Ferreira.
+\emph{An Implementation of a Transaction Model for Business Process Systems},
+Journal of Information and Data Management - SBBD, 2012
 
 \bibitem{PSQL}
 PostgreSQL, v9.5.x \\

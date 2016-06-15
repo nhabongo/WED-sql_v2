@@ -1,0 +1,30 @@
+----Database Management Operarions----
+
+- Create a new WED-flow: run script to create a new database and initiate it as a WED-SQL database;
+- Create WED-flow user;
+- Create WED-worker user;
+- Drop WED-flow;
+- Drop WED-users;
+- List WED-flows;
+- List WED-users;
+
+----WED-flow Operations----
+
+- Create WED-attributes;
+- Create WED-triggers;
+- Create WED-flow instance;
+- Enable/Disable WED-triggers;
+
+------------------------------------------------------------------------------------------------------------------------
+
+create wed-flow nhaga;
+
+create wed-attribute a1 default value '67';
+
+create wed-trigger t1=(tr1 timeout '00:00:00', cd1 as a1 is not null and (a1 <> 'nhaga'));
+
+create final wed-condition cf as a1='bongo'
+
+create wed-flow instance as ...
+
+
