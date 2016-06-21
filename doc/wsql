@@ -1,46 +1,83 @@
-----Database Management Operarions----
+This is the initial draft of the WSQL (or WED-SQL) declarative language. Declarations presented between [] are always optional.
 
-- Create a new WED-flow: run script to create a new database and initiate it as a WED-SQL database;
-- Create WED-flow user;
-- Create WED-worker user;
-- Drop WED-flow;
-- Drop WED-users;
-- List WED-flows;
-- List WED-users;
+CREATE WED-FLOW wedflow_name [WITH PASSWORD password];
 
-----WED-flow Operations----
+Creates a new WED-flow database a management user both identifyed by 'wedflow_name'. Although the WITH PASSWORD parameter 
+is optional, it will be prompted when omitted. A manager user has the right credencials to manipulate a specific WED-flow, 
+including creating external users. Every WED-flow database must have a manager user.
 
-- Create WED-attributes;
-- Create WED-triggers;
-- Create WED-flow instance;
-- Enable/Disable WED-triggers;
+CREATE WED-ATTRIBUTE attr_name [DEFAULT VALUE value];
 
-------------------------------------------------------------------------------------------------------------------------
+Creates a new WED-attribute identifyed by 'attr_name' with a optional default value.
 
-create wed-flow nhaga;
+CREATE WED-TRANSITION trans_name [WITH TIMEOUT time];
 
-create wed-attribute a1 default value '67';
+Creates a new WED-transition identified by 'trans_name' with a timeout of 'time'. The time parameter uses the same
+notation as the postgresql type 'interval'. For example, one hour interval can be expressed as '01:00:00' or '1h'. When
+omitted, the default time interval of one hour will be assumed.
 
-create wed-transition t1 timeout '00:00:00';
+CREATE WED-CONDITION cond_name WITH PREDICATE pred;
 
-create [final | regular] wed-condition cf as a1='bongo'
+Creates a new WED-condition identified by cond_name and having pred as its predicate. 'pred' can be anything accepted by
+the SQL clause WHERE;
 
-create wed-trigger t1 as (tr1 [timeout '00:00:00'], cd1 [as a1 is not null and (a1 <> 'nhaga')]);
+CREATE WED-TRIGGER trg_name as (trans_name [WITH TIMEOUT timeout], cond_name [WITH PREDICATE pred])
 
-create [default] instance as ...
+Creates a new WED-trigger associating a WED-transition with a WED-condition. Both the transition and the condition can
+be pre-defined or created on the fly when the optional parameters are present.
 
-enable/disable wed-trigger t1;
+CREATE INSTANCE AS [DEFAULT VALUES] wed_state;
 
-list [enabled | disabled] wed-triggers;
+Creates a new WED-flow instance where 'wed_state' represents the initial values for the WED-attributes. When DEFAULT VALUES
+is present, this instance will be created using the default values defined for the WED-atributes.
 
-list wed-attributes;
+UPDATE WED-ATTRIBUTE atr_name SET DEFAULT VALUE value;
 
-list [pending | ongoing] wed-transitions [for wid];
+Change the default value for WED-attribute 'atr_name'
 
-list [final | exception | regular] instances;
+UPDATE WED-TRANSITION trans_name SET TIMEOUT timeout;
 
-update wed-attribute a1 default value '68';
+Change WED-transition trans_name's timeout.
 
-get trace for [wid];
+{ENABLE | DISABLE} WED-TRIGGER trg_name;
+
+Enable or disable a WED-trigger. When disabled, a WED-trigger will not fire a WED-transitiont even if the WED-condition
+matches a new WED-state.
+
+LIST [ENABLED | DISABLED] WED-TRIGGERS;
+
+By default, lists all WED-triggers defined for this WED-flow.
+
+LIST WED-ATTRIBUTES;
+
+Lists all defined WED-attributes;
+
+LIST WED-CONDITIONS;
+
+Lists all defined WED-conditions;
+
+LIST WED-TRANSITIONS;
+
+Lists all defined WED-transitions;
+
+LIST [PENDING | ONGOING] FIRED WED-TRANSITIONS [FOR wid];
+
+By default, lists all fired WED-transitions for all instances. When PENDING is present, only WED-transitions awating to 
+be performed are show. When ONGOING is present, only WED-transitions that are beeing executed by a WED-worker are show.
+The FOR parameter can be used to specify a single instance 'wid'.
+
+LIST [FINAL | EXCEPTION | REGULAR] INSTANCES;
+
+By default, lists all WED-flow instance's current WED-state. Optional parameters can be used to specify what kind of instances
+should be listed.
+
+LIST HISTORY [FOR wid];
+
+By default, displays the execution history for all WED-flow instances. The optional parameter can be used to specify a
+instance. 
+
+P.S.: Other aditional wsql tokens were intentionaly left off because I am not sure yet how to carry out some operations. For
+example, how to disable or remove WED-attributes ? 
+
 
 

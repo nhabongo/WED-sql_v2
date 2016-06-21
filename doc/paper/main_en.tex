@@ -414,19 +414,30 @@ calton@cc.gatech.edu}}
 % make the title area
 \maketitle
 
-
 \begin{abstract}
+Despite the significant evolution of the design and implementation of business process models, a transactional approach 
+that evolves an incremental and adaptive strategy remains an important challenge to be overcome for database management 
+systems. Traditional frameworks such as BPEL, Process Algebra, and Petri Net require an additional  software layer or some 
+external toolkits to be able to enforce a data-state based transaction control and deal with semantic exceptions. However, 
+the complexity of implementation based on these traditional frameworks, especially to treat exceptions, is too high. In 
+this paper, we present the WED-SQL, a distributed framework that provides a reliable and efficient way to design  and 
+implement business processes. Our main contribution is the integration of WED-flow concepts into the PostgresSQL RDBMS. 
+This integration enables the WED-SQL to take full advantage of  transactional properties and also benefit from the SQL 
+language to specify the WED-flow definitions.
+\end{abstract}
+
+%\begin{abstract}
 %\boldmath
 %\blindtext[1]
-Business process models designed and implemented under WED-flow concepts are true dynamic systems, easy to evolve in a
-incremental and adaptive approach and drastically reducing the complexity of exceptions handling when compared to other
-more traditional frameworks (like BPEL, Process Algebra and Petri Networks). On the implementation side, however, these
-systems must either provide an extra software layer or use some external toolkit, or even a framework, to be able to enforce 
-a data-state based transaction control, what includes dealing with semantic exceptions. In this paper we present the 
-WED-SQL, a distributed framework that provides a reliable e efficient way to write and implement WED-flow applications.
-One of its main attributes is the integration with the PostgreSQL Relational Database Management System, which enables
-the WED-SQL to take full advantage of all the transactional properties provided and also benefit from the SQL language
-to specify the WED-flow definitions (e.g. WED-conditions, WED-transitions, and so on). 
+%Business process models designed and implemented under WED-flow concepts are true dynamic systems, easy to evolve in a
+%incremental and adaptive approach and drastically reducing the complexity of exceptions handling when compared to other
+%more traditional frameworks (like BPEL, Process Algebra and Petri Networks). On the implementation side, however, these
+%systems must either provide an extra software layer or use some external toolkit, or even a framework, to be able to enforce 
+%a data-state based transaction control, what includes dealing with semantic exceptions. In this paper we present the 
+%WED-SQL, a distributed framework that provides a reliable e efficient way to write and implement WED-flow applications.
+%One of its main attributes is the integration with the PostgreSQL Relational Database Management System, which enables
+%the WED-SQL to take full advantage of all the transactional properties provided and also benefit from the SQL language
+%to specify the WED-flow definitions (e.g. WED-conditions, WED-transitions, and so on). 
 
 \end{abstract}
 % IEEEtran.cls defaults to using nonbold math in the Abstract.
